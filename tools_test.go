@@ -182,7 +182,7 @@ func TestRangePendingToolCalls(t *testing.T) {
 			chat := &aichat.Chat{Messages: tt.messages}
 			var gotIDs []string
 
-			err := chat.RangePendingToolCalls(func(toolCall *aichat.ToolCallSession) error {
+			err := chat.RangePendingToolCalls(func(toolCall *aichat.ToolCallMessage) error {
 				gotIDs = append(gotIDs, toolCall.ToolCall.ID)
 				return nil
 			})
@@ -206,7 +206,7 @@ func TestRangePendingToolCalls(t *testing.T) {
 		}
 
 		expectedErr := "test error"
-		err := chat.RangePendingToolCalls(func(toolCall *aichat.ToolCallSession) error {
+		err := chat.RangePendingToolCalls(func(toolCall *aichat.ToolCallMessage) error {
 			return errors.New(expectedErr)
 		})
 

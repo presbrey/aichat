@@ -40,12 +40,10 @@ func (m *Message) ContentParts() ([]*Part, error) {
 	}
 	p := []*Part{}
 	b, err := json.Marshal(d)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		if err = json.Unmarshal(b, &p); err == nil {
+			return p, nil
+		}
 	}
-	err = json.Unmarshal(b, &p)
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
+	return nil, err
 }

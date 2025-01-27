@@ -34,7 +34,7 @@ func (f *Function) ArgumentsMap() (map[string]interface{}, error) {
 // RangePendingToolCalls iterates through messages to find and process tool calls that haven't received a response.
 // It performs two passes: first to identify which tool calls have responses, then to process pending calls.
 // The provided function is called for each pending tool call.
-func (chat *Chat) RangePendingToolCalls(fn func(toolCall *ToolCallSession) error) error {
+func (chat *Chat) RangePendingToolCalls(fn func(toolCall *ToolCallMessage) error) error {
 	// Create a map to track which tool calls have responses
 	responded := make(map[string]bool)
 
@@ -49,7 +49,7 @@ func (chat *Chat) RangePendingToolCalls(fn func(toolCall *ToolCallSession) error
 	for _, msg := range chat.Messages {
 		for _, call := range msg.ToolCalls {
 			if !responded[call.ID] {
-				if err := fn(&ToolCallSession{
+				if err := fn(&ToolCallMessage{
 					Chat:     chat,
 					ToolCall: &call,
 				}); err != nil {
@@ -63,25 +63,25 @@ func (chat *Chat) RangePendingToolCalls(fn func(toolCall *ToolCallSession) error
 	return nil
 }
 
-// ToolCallSession represents a tool call within a chat context, managing the lifecycle
+// ToolCallMessage represents a tool call within a chat context, managing the lifecycle
 // of a single tool invocation including its execution and response handling.
-type ToolCallSession struct {
+type ToolCallMessage struct {
 	ToolCall *ToolCall
 	Chat     *Chat
 }
 
 // Name returns the name of the function
-func (tcs *ToolCallSession) Name() string {
+func (tcs *ToolCallMessage) Name() string {
 	return tcs.ToolCall.Function.Name
 }
 
 // Arguments returns the arguments to the function as a map
-func (tcs *ToolCallSession) Arguments() (map[string]any, error) {
+func (tcs *ToolCallMessage) Arguments() (map[string]any, error) {
 	return tcs.ToolCall.Function.ArgumentsMap()
 }
 
 // Return sends the result of the function call back to the chat
-func (tcs *ToolCallSession) Return(result map[string]any) error {
+func (tcs *ToolCallMessage) Return(result map[string]any) error {
 	jsonData, err := json.Marshal(result)
 	if err != nil {
 		return fmt.Errorf("failed to marshal result: %v", err)
