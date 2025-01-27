@@ -1,6 +1,7 @@
 package aichat_test
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 )
 
 func TestChat(t *testing.T) {
+	ctx := context.Background()
 	s3 := newMockS3()
 	session := aichat.NewChat("test-id", aichat.Options{
 		S3: s3,
@@ -73,7 +75,7 @@ func TestChat(t *testing.T) {
 		t.Errorf("Unexpected tool response name")
 	}
 
-	newSession.Delete("test-key")
+	newSession.Delete(ctx, "test-key")
 }
 
 func TestChatWithAssistantMessage(t *testing.T) {

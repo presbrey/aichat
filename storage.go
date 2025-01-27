@@ -2,6 +2,7 @@ package aichat
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,20 +11,20 @@ import (
 // S3 represents a storage interface for sessions
 type S3 interface {
 	// Get retrieves data from storage
-	Get(key string) (io.ReadCloser, error)
+	Get(ctx context.Context, key string) (io.ReadCloser, error)
 	// Put stores data
-	Put(key string, data io.Reader) error
+	Put(ctx context.Context, key string, data io.Reader) error
 	// Delete deletes data from storage
-	Delete(key string) error
+	Delete(ctx context.Context, key string) error
 }
 
-// Load loads a session from S3 storage
-func (s *Chat) Load(key string) error {
+// Load loads a chat from S3 storage
+func (s *Chat) Load(ctx context.Context, key string) error {
 	if s.Options.S3 == nil {
 		return fmt.Errorf("s3 storage not initialized")
 	}
 
-	reader, err := s.Options.S3.Get(key)
+	reader, err := s.Options.S3.Get(ctx, key)
 	if err != nil {
 		return fmt.Errorf("failed to get session from storage: %v", err)
 	}
@@ -37,7 +38,7 @@ func (s *Chat) Load(key string) error {
 }
 
 // Save saves the session to S3 storage
-func (s *Chat) Save(key string) error {
+func (s *Chat) Save(ctx context.Context, key string) error {
 	if s.Options.S3 == nil {
 		return fmt.Errorf("s3 storage not initialized")
 	}
@@ -47,16 +48,16 @@ func (s *Chat) Save(key string) error {
 		return fmt.Errorf("failed to marshal session: %v", err)
 	}
 
-	return s.Options.S3.Put(key, io.NopCloser(bytes.NewReader(data)))
+	return s.Options.S3.Put(ctx, key, io.NopCloser(bytes.NewReader(data)))
 }
 
 // Delete deletes the session from S3 storage
-func (s *Chat) Delete(key string) error {
+func (s *Chat) Delete(ctx context.Context, key string) error {
 	if s.Options.S3 == nil {
 		return fmt.Errorf("s3 storage not initialized")
 	}
 
-	return s.Options.S3.Delete(key)
+	return s.Options.S3.Delete(ctx, key)
 }
 
 // ChatStorage represents a storage interface for sessions
@@ -72,7 +73,7 @@ func NewChatStorage(options Options) *ChatStorage {
 }
 
 // Load loads a session from storage
-func (s *ChatStorage) Load(key string) (*Chat, error) {
+func (s *ChatStorage) Load(ctx context.Context, key string) (*Chat, error) {
 	c := NewChat(key, s.Options)
-	return c, c.Load(key)
+	return c, c.Load(ctx, key)
 }

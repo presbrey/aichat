@@ -1,6 +1,7 @@
 package aichat_test
 
 import (
+	"context"
 	"errors"
 	"io"
 	"strings"
@@ -20,7 +21,7 @@ func newMockS3() *mockS3 {
 	}
 }
 
-func (m *mockS3) Get(key string) (io.ReadCloser, error) {
+func (m *mockS3) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	data, ok := m.data[key]
 	if !ok {
 		return nil, errors.New("key not found")
@@ -28,7 +29,7 @@ func (m *mockS3) Get(key string) (io.ReadCloser, error) {
 	return io.NopCloser(strings.NewReader(string(data))), nil
 }
 
-func (m *mockS3) Put(key string, data io.Reader) error {
+func (m *mockS3) Put(ctx context.Context, key string, data io.Reader) error {
 	b, err := io.ReadAll(data)
 	if err != nil {
 		return err
@@ -37,12 +38,13 @@ func (m *mockS3) Put(key string, data io.Reader) error {
 	return nil
 }
 
-func (m *mockS3) Delete(key string) error {
+func (m *mockS3) Delete(ctx context.Context, key string) error {
 	delete(m.data, key)
 	return nil
 }
 
 func TestSessionStorage(t *testing.T) {
+	ctx := context.Background()
 	s3 := newMockS3()
 	session := aichat.NewChat("test-id", aichat.Options{
 		S3: s3,
@@ -53,7 +55,7 @@ func TestSessionStorage(t *testing.T) {
 	session.Metadata["test"] = "value"
 
 	// Test saving
-	err := session.Save("test-key")
+	err := session.Save(ctx, "test-key")
 	if err != nil {
 		t.Fatalf("Failed to save session: %v", err)
 	}
@@ -62,7 +64,7 @@ func TestSessionStorage(t *testing.T) {
 	loadedSession := aichat.NewChat("test-id", aichat.Options{
 		S3: s3,
 	})
-	err = loadedSession.Load("test-key")
+	err = loadedSession.Load(ctx, "test-key")
 	if err != nil {
 		t.Fatalf("Failed to load session: %v", err)
 	}
@@ -80,21 +82,23 @@ func TestSessionStorage(t *testing.T) {
 		t.Errorf("Expected metadata value 'value', got %v", loadedSession.Metadata["test"])
 	}
 
-	err = loadedSession.Delete("test-key")
+	err = loadedSession.Delete(ctx, "test-key")
 	if err != nil {
 		t.Fatalf("Failed to delete session: %v", err)
 	}
 }
 
 func TestSessionStorageErrors(t *testing.T) {
+	ctx := context.Background()
+
 	// Test with nil S3
 	session := &aichat.Chat{ID: "test-id"}
 
-	if err := session.Save("test-key"); err == nil {
+	if err := session.Save(ctx, "test-key"); err == nil {
 		t.Error("Expected error when saving with nil S3")
 	}
 
-	if err := session.Load("test-key"); err == nil {
+	if err := session.Load(ctx, "test-key"); err == nil {
 		t.Error("Expected error when loading with nil S3")
 	}
 }
