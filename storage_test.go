@@ -43,7 +43,7 @@ func (m *mockS3) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-func TestSessionStorage(t *testing.T) {
+func TestChatStorage(t *testing.T) {
 	ctx := context.Background()
 	s3 := newMockS3()
 	session := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
@@ -85,7 +85,7 @@ func TestSessionStorage(t *testing.T) {
 	}
 }
 
-func TestSessionStorageErrors(t *testing.T) {
+func TestStorageErrors(t *testing.T) {
 	ctx := context.Background()
 
 	// Test with nil S3
@@ -97,5 +97,64 @@ func TestSessionStorageErrors(t *testing.T) {
 
 	if err := session.Load(ctx, "test-key"); err == nil {
 		t.Error("Expected error when loading with nil S3")
+	}
+}
+
+func TestNewStorage(t *testing.T) {
+	s3 := newMockS3()
+	opts := aichat.Options{S3: s3}
+
+	storage := aichat.NewStorage(opts)
+	if storage == nil {
+		t.Fatal("Expected non-nil storage")
+	}
+
+	if storage.Options.S3 != s3 {
+		t.Error("Storage options not set correctly")
+	}
+}
+
+func TestStorageLoad(t *testing.T) {
+	ctx := context.Background()
+	s3 := newMockS3()
+	opts := aichat.Options{S3: s3}
+	storage := aichat.NewStorage(opts)
+
+	// First create and save a chat
+	originalChat := &aichat.Chat{
+		Key:     "test-key",
+		ID:      "test-id",
+		Options: opts,
+	}
+	originalChat.AddUserMessage("Test message")
+	if err := originalChat.Save(ctx, "test-key"); err != nil {
+		t.Fatalf("Failed to save chat: %v", err)
+	}
+
+	// Now test loading the chat
+	loadedChat, err := storage.Load(ctx, "test-key")
+	if err != nil {
+		t.Fatalf("Failed to load chat: %v", err)
+	}
+	if loadedChat == nil {
+		t.Fatal("Expected non-nil chat")
+	}
+	if loadedChat.Key != "test-key" {
+		t.Errorf("Expected key 'test-key', got %s", loadedChat.Key)
+	}
+	if loadedChat.ID != "test-id" {
+		t.Errorf("Expected ID 'test-id', got %s", loadedChat.ID)
+	}
+	if len(loadedChat.Messages) != 1 {
+		t.Errorf("Expected 1 message, got %d", len(loadedChat.Messages))
+	}
+	if loadedChat.Options.S3 != s3 {
+		t.Error("Chat options not set correctly")
+	}
+
+	// Test loading non-existent chat
+	_, err = storage.Load(ctx, "non-existent-key")
+	if err == nil {
+		t.Error("Expected error when loading non-existent chat")
 	}
 }
