@@ -1,6 +1,7 @@
 package aichat_test
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -139,4 +140,78 @@ func TestArgumentsMap(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRangePendingToolCalls(t *testing.T) {
+	tests := []struct {
+		name     string
+		messages []aichat.Message
+		wantIDs  []string
+		wantErr  bool
+	}{
+		{
+			name: "no pending tool calls",
+			messages: []aichat.Message{
+				{ToolCallID: "call1", Content: "response1"},
+				{ToolCalls: []aichat.ToolCall{{ID: "call1"}}},
+			},
+			wantIDs: nil,
+			wantErr: false,
+		},
+		{
+			name: "one pending tool call",
+			messages: []aichat.Message{
+				{ToolCalls: []aichat.ToolCall{{ID: "call1"}}},
+			},
+			wantIDs: []string{"call1"},
+			wantErr: false,
+		},
+		{
+			name: "multiple pending tool calls",
+			messages: []aichat.Message{
+				{ToolCalls: []aichat.ToolCall{{ID: "call1"}, {ID: "call2"}}},
+				{ToolCallID: "call1", Content: "response1"},
+			},
+			wantIDs: []string{"call2"},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			chat := &aichat.Chat{Messages: tt.messages}
+			var gotIDs []string
+
+			err := chat.RangePendingToolCalls(func(toolCall *aichat.ToolCallSession) error {
+				gotIDs = append(gotIDs, toolCall.ToolCall.ID)
+				return nil
+			})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RangePendingToolCalls() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !reflect.DeepEqual(gotIDs, tt.wantIDs) {
+				t.Errorf("RangePendingToolCalls() processed IDs = %v, want %v", gotIDs, tt.wantIDs)
+			}
+		})
+	}
+
+	t.Run("error case", func(t *testing.T) {
+		chat := &aichat.Chat{
+			Messages: []aichat.Message{
+				{ToolCalls: []aichat.ToolCall{{ID: "call1"}}},
+			},
+		}
+
+		expectedErr := "test error"
+		err := chat.RangePendingToolCalls(func(toolCall *aichat.ToolCallSession) error {
+			return errors.New(expectedErr)
+		})
+
+		if err == nil || err.Error() != expectedErr {
+			t.Errorf("RangePendingToolCalls() error = %v, want %v", err, expectedErr)
+		}
+	})
 }
