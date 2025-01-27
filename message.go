@@ -13,7 +13,7 @@ type Message struct {
 	ToolCallID string     `json:"tool_call_id,omitempty"` // For tool responses
 }
 
-// ContentString returns the content of the message if its a string
+// ContentString returns the content of the message if its a simple string (not multipart)
 func (m *Message) ContentString() string {
 	v, _ := m.Content.(string)
 	return v
@@ -29,6 +29,7 @@ type Part struct {
 	} `json:"image_url,omitempty"`
 }
 
+// ContentParts returns the parts of the message content if its multipart content
 func (m *Message) ContentParts() ([]*Part, error) {
 	d, ok := m.Content.([]any)
 	if !ok {
