@@ -31,62 +31,62 @@ type Chat struct {
 }
 
 // AddRoleContent adds a role and content to the session
-func (s *Chat) AddRoleContent(role string, content any) {
-	s.Messages = append(s.Messages, Message{
+func (chat *Chat) AddRoleContent(role string, content any) {
+	chat.Messages = append(chat.Messages, Message{
 		Role:    role,
 		Content: content,
 	})
-	s.LastUpdated = time.Now()
+	chat.LastUpdated = time.Now()
 }
 
 // AddUserMessage adds a user message to the session
-func (s *Chat) AddUserMessage(content any) {
-	s.AddRoleContent("user", content)
+func (chat *Chat) AddUserMessage(content any) {
+	chat.AddRoleContent("user", content)
 }
 
 // AddAssistantMessage adds an assistant message to the session
-func (s *Chat) AddAssistantMessage(content any) {
-	s.AddRoleContent("assistant", content)
+func (chat *Chat) AddAssistantMessage(content any) {
+	chat.AddRoleContent("assistant", content)
 }
 
 // AddAssistantToolCall adds an assistant message with tool calls
-func (s *Chat) AddAssistantToolCall(toolCalls []ToolCall) {
-	s.Messages = append(s.Messages, Message{
+func (chat *Chat) AddAssistantToolCall(toolCalls []ToolCall) {
+	chat.Messages = append(chat.Messages, Message{
 		Role:      "assistant",
 		Content:   nil,
 		ToolCalls: toolCalls,
 	})
-	s.LastUpdated = time.Now()
+	chat.LastUpdated = time.Now()
 }
 
 // AddToolResponse adds a tool response message
-func (s *Chat) AddToolResponse(name, toolCallID, content string) {
-	s.Messages = append(s.Messages, Message{
+func (chat *Chat) AddToolResponse(name, toolCallID, content string) {
+	chat.Messages = append(chat.Messages, Message{
 		Role:       "tool",
 		Name:       name,
 		ToolCallID: toolCallID,
 		Content:    content,
 	})
-	s.LastUpdated = time.Now()
+	chat.LastUpdated = time.Now()
 }
 
 // MarshalJSON implements custom JSON marshaling for the session
-func (s *Chat) MarshalJSON() ([]byte, error) {
+func (chat *Chat) MarshalJSON() ([]byte, error) {
 	type Alias Chat
 	return json.Marshal(&struct {
 		*Alias
 	}{
-		Alias: (*Alias)(s),
+		Alias: (*Alias)(chat),
 	})
 }
 
 // UnmarshalJSON implements custom JSON unmarshaling for the session
-func (s *Chat) UnmarshalJSON(data []byte) error {
+func (chat *Chat) UnmarshalJSON(data []byte) error {
 	type Alias Chat
 	aux := &struct {
 		*Alias
 	}{
-		Alias: (*Alias)(s),
+		Alias: (*Alias)(chat),
 	}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("failed to unmarshal session: %v", err)

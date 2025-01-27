@@ -19,18 +19,18 @@ type S3 interface {
 }
 
 // Load loads a chat from S3 storage
-func (s *Chat) Load(ctx context.Context, key string) error {
-	if s.Options.S3 == nil {
+func (chat *Chat) Load(ctx context.Context, key string) error {
+	if chat.Options.S3 == nil {
 		return fmt.Errorf("s3 storage not initialized")
 	}
 
-	reader, err := s.Options.S3.Get(ctx, key)
+	reader, err := chat.Options.S3.Get(ctx, key)
 	if err != nil {
 		return fmt.Errorf("failed to get session from storage: %v", err)
 	}
 	defer reader.Close()
 
-	if err := json.NewDecoder(reader).Decode(s); err != nil {
+	if err := json.NewDecoder(reader).Decode(chat); err != nil {
 		return fmt.Errorf("failed to decode session: %v", err)
 	}
 
@@ -38,26 +38,26 @@ func (s *Chat) Load(ctx context.Context, key string) error {
 }
 
 // Save saves the session to S3 storage
-func (s *Chat) Save(ctx context.Context, key string) error {
-	if s.Options.S3 == nil {
+func (chat *Chat) Save(ctx context.Context, key string) error {
+	if chat.Options.S3 == nil {
 		return fmt.Errorf("s3 storage not initialized")
 	}
 
-	data, err := json.Marshal(s)
+	data, err := json.Marshal(chat)
 	if err != nil {
 		return fmt.Errorf("failed to marshal session: %v", err)
 	}
 
-	return s.Options.S3.Put(ctx, key, bytes.NewReader(data))
+	return chat.Options.S3.Put(ctx, key, bytes.NewReader(data))
 }
 
 // Delete deletes the session from S3 storage
-func (s *Chat) Delete(ctx context.Context, key string) error {
-	if s.Options.S3 == nil {
+func (chat *Chat) Delete(ctx context.Context, key string) error {
+	if chat.Options.S3 == nil {
 		return fmt.Errorf("s3 storage not initialized")
 	}
 
-	return s.Options.S3.Delete(ctx, key)
+	return chat.Options.S3.Delete(ctx, key)
 }
 
 // Storage represents a storage interface for chat sessions
