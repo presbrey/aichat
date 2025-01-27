@@ -1,5 +1,7 @@
 # AI Chat Manager
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/presbrey/aichat.svg)](https://pkg.go.dev/github.com/presbrey/aichat)
+
 A Go package for managing AI chat sessions with support for message history, tool calls, and S3-compatible storage.
 
 ## Features
