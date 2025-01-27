@@ -46,12 +46,11 @@ func (m *mockS3) Delete(ctx context.Context, key string) error {
 func TestSessionStorage(t *testing.T) {
 	ctx := context.Background()
 	s3 := newMockS3()
-	session := aichat.NewChat("test-id", aichat.Options{
-		S3: s3,
-	})
+	session := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
 
 	// Add some test data
 	session.AddUserMessage("Test message")
+	session.Metadata = make(map[string]any)
 	session.Metadata["test"] = "value"
 
 	// Test saving
@@ -61,9 +60,7 @@ func TestSessionStorage(t *testing.T) {
 	}
 
 	// Create a new session and load the data
-	loadedSession := aichat.NewChat("test-id", aichat.Options{
-		S3: s3,
-	})
+	loadedSession := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
 	err = loadedSession.Load(ctx, "test-key")
 	if err != nil {
 		t.Fatalf("Failed to load session: %v", err)

@@ -61,19 +61,19 @@ func (s *Chat) Delete(ctx context.Context, key string) error {
 }
 
 // ChatStorage represents a storage interface for sessions
-type ChatStorage struct {
+type Storage struct {
 	Options Options
 }
 
 // NewChatStorage creates a new session storage
-func NewChatStorage(options Options) *ChatStorage {
-	return &ChatStorage{
+func NewStorage(options Options) *Storage {
+	return &Storage{
 		Options: options,
 	}
 }
 
 // Load loads a session from storage
-func (s *ChatStorage) Load(ctx context.Context, key string) (*Chat, error) {
-	c := NewChat(key, s.Options)
+func (s *Storage) Load(ctx context.Context, key string) (*Chat, error) {
+	c := &Chat{Key: key, Options: s.Options}
 	return c, c.Load(ctx, key)
 }

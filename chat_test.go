@@ -11,9 +11,7 @@ import (
 func TestChat(t *testing.T) {
 	ctx := context.Background()
 	s3 := newMockS3()
-	session := aichat.NewChat("test-id", aichat.Options{
-		S3: s3,
-	})
+	session := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
 
 	// Test adding user message
 	session.AddUserMessage("What is the weather like in Boston?")
@@ -80,9 +78,7 @@ func TestChat(t *testing.T) {
 
 func TestChatWithAssistantMessage(t *testing.T) {
 	s3 := newMockS3()
-	session := aichat.NewChat("test-id", aichat.Options{
-		S3: s3,
-	})
+	session := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
 
 	content := "The weather in Boston is sunny and 22°C."
 	session.AddAssistantMessage(content)

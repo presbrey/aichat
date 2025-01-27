@@ -14,25 +14,13 @@ type Options struct {
 // Chat represents a chat session with message history
 type Chat struct {
 	ID          string         `json:"id,omitempty"`
+	Key         string         `json:"key,omitempty"`
 	Messages    []Message      `json:"messages"`
 	Created     time.Time      `json:"created"`
 	LastUpdated time.Time      `json:"last_updated"`
 	Metadata    map[string]any `json:"metadata,omitempty"`
 
 	Options Options `json:"-"`
-}
-
-// NewChat creates a new chat session with the given ID and options
-func NewChat(id string, options Options) *Chat {
-	now := time.Now()
-	return &Chat{
-		ID:          id,
-		Messages:    make([]Message, 0),
-		Created:     now,
-		LastUpdated: now,
-		Metadata:    make(map[string]any),
-		Options:     options,
-	}
 }
 
 // AddUserMessage adds a user message to the session
