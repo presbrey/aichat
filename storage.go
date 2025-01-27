@@ -48,7 +48,7 @@ func (s *Chat) Save(ctx context.Context, key string) error {
 		return fmt.Errorf("failed to marshal session: %v", err)
 	}
 
-	return s.Options.S3.Put(ctx, key, io.NopCloser(bytes.NewReader(data)))
+	return s.Options.S3.Put(ctx, key, bytes.NewReader(data))
 }
 
 // Delete deletes the session from S3 storage
