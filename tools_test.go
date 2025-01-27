@@ -218,7 +218,7 @@ func TestRangePendingToolCalls(t *testing.T) {
 
 func TestToolCallMessage(t *testing.T) {
 	tests := []struct {
-		name           string
+		name          string
 		toolCall      *aichat.ToolCall
 		wantName      string
 		wantArgs      map[string]interface{}
@@ -244,7 +244,7 @@ func TestToolCallMessage(t *testing.T) {
 			wantArgsError: false,
 			returnResult: map[string]interface{}{
 				"temperature": 20,
-				"condition":  "sunny",
+				"condition":   "sunny",
 			},
 			wantError: false,
 		},
