@@ -13,7 +13,7 @@ type Options struct {
 
 // Chat represents a chat session with message history
 type Chat struct {
-	ID          string         `json:"id"`
+	ID          string         `json:"id,omitempty"`
 	Messages    []Message      `json:"messages"`
 	Created     time.Time      `json:"created"`
 	LastUpdated time.Time      `json:"last_updated"`

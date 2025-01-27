@@ -7,7 +7,7 @@ import (
 
 // ToolCall represents a call to an external tool or function
 type ToolCall struct {
-	ID       string   `json:"id"`
+	ID       string   `json:"id,omitempty"`
 	Type     string   `json:"type"`
 	Function Function `json:"function"`
 }
