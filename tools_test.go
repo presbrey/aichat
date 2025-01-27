@@ -215,3 +215,92 @@ func TestRangePendingToolCalls(t *testing.T) {
 		}
 	})
 }
+
+func TestToolCallMessage(t *testing.T) {
+	tests := []struct {
+		name           string
+		toolCall      *aichat.ToolCall
+		wantName      string
+		wantArgs      map[string]interface{}
+		wantArgsError bool
+		returnResult  map[string]interface{}
+		wantError     bool
+	}{
+		{
+			name: "valid tool call",
+			toolCall: &aichat.ToolCall{
+				ID:   "test1",
+				Type: "function",
+				Function: aichat.Function{
+					Name:      "getWeather",
+					Arguments: `{"location": "Boston", "units": "celsius"}`,
+				},
+			},
+			wantName: "getWeather",
+			wantArgs: map[string]interface{}{
+				"location": "Boston",
+				"units":    "celsius",
+			},
+			wantArgsError: false,
+			returnResult: map[string]interface{}{
+				"temperature": 20,
+				"condition":  "sunny",
+			},
+			wantError: false,
+		},
+		{
+			name: "invalid arguments json",
+			toolCall: &aichat.ToolCall{
+				ID:   "test2",
+				Type: "function",
+				Function: aichat.Function{
+					Name:      "testFunc",
+					Arguments: `{"invalid": json`,
+				},
+			},
+			wantName:      "testFunc",
+			wantArgs:      nil,
+			wantArgsError: true,
+			returnResult:  nil,
+			wantError:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			chat := &aichat.Chat{}
+			tcm := &aichat.ToolCallMessage{
+				ToolCall: tt.toolCall,
+				Chat:     chat,
+			}
+
+			// Test Name()
+			if got := tcm.Name(); got != tt.wantName {
+				t.Errorf("Name() = %v, want %v", got, tt.wantName)
+			}
+
+			// Test Arguments()
+			got, err := tcm.Arguments()
+			if (err != nil) != tt.wantArgsError {
+				t.Errorf("Arguments() error = %v, wantArgsError %v", err, tt.wantArgsError)
+				return
+			}
+			if !tt.wantArgsError && !reflect.DeepEqual(got, tt.wantArgs) {
+				t.Errorf("Arguments() = %v, want %v", got, tt.wantArgs)
+			}
+
+			// Test Return()
+			if tt.returnResult != nil {
+				err := tcm.Return(tt.returnResult)
+				if (err != nil) != tt.wantError {
+					t.Errorf("Return() error = %v, wantError %v", err, tt.wantError)
+				}
+
+				// Verify the response was added to the chat
+				if !tt.wantError && len(chat.Messages) != 1 {
+					t.Error("Return() did not add message to chat")
+				}
+			}
+		})
+	}
+}
