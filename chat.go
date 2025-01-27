@@ -6,20 +6,27 @@ import (
 	"time"
 )
 
-// Options contains configuration options for Chat
+// Options contains configuration options for Chat sessions.
+// S3 provides storage capabilities for persisting chat sessions.
 type Options struct {
 	S3 S3
 }
 
 // Chat represents a chat session with message history
 type Chat struct {
-	ID          string         `json:"id,omitempty"`
-	Key         string         `json:"key,omitempty"`
-	Messages    []Message      `json:"messages"`
-	Created     time.Time      `json:"created"`
-	LastUpdated time.Time      `json:"last_updated"`
-	Metadata    map[string]any `json:"metadata,omitempty"`
-
+	// ID is the unique identifier for the chat session
+	ID string `json:"id,omitempty"`
+	// Key is the storage key used for persistence
+	Key string `json:"key,omitempty"`
+	// Messages contains the chronological history of chat messages
+	Messages []Message `json:"messages"`
+	// Created is the timestamp when the chat session was created
+	Created time.Time `json:"created"`
+	// LastUpdated is the timestamp of the most recent message or modification
+	LastUpdated time.Time `json:"last_updated"`
+	// Metadata stores arbitrary session-related data
+	Metadata map[string]any `json:"metadata,omitempty"`
+	// Options contains the configuration for these chat sessions
 	Options Options `json:"-"`
 }
 

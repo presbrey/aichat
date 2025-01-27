@@ -31,7 +31,9 @@ func (f *Function) ArgumentsMap() (map[string]interface{}, error) {
 	return result, nil
 }
 
-// GetPendingToolCalls returns any tool calls that haven't received a reply message
+// RangePendingToolCalls iterates through messages to find and process tool calls that haven't received a response.
+// It performs two passes: first to identify which tool calls have responses, then to process pending calls.
+// The provided function is called for each pending tool call.
 func (chat *Chat) RangePendingToolCalls(fn func(toolCall *ToolCallSession) error) error {
 	// Create a map to track which tool calls have responses
 	responded := make(map[string]bool)
@@ -61,7 +63,8 @@ func (chat *Chat) RangePendingToolCalls(fn func(toolCall *ToolCallSession) error
 	return nil
 }
 
-// ToolCallSession represents a call to an external tool or function in context of a chat session
+// ToolCallSession represents a tool call within a chat context, managing the lifecycle
+// of a single tool invocation including its execution and response handling.
 type ToolCallSession struct {
 	ToolCall *ToolCall
 	Chat     *Chat
