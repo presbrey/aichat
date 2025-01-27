@@ -23,22 +23,23 @@ type Chat struct {
 	Options Options `json:"-"`
 }
 
-// AddUserMessage adds a user message to the session
-func (s *Chat) AddUserMessage(content string) {
+// AddRoleContent adds a role and content to the session
+func (s *Chat) AddRoleContent(role string, content any) {
 	s.Messages = append(s.Messages, Message{
-		Role:    "user",
+		Role:    role,
 		Content: content,
 	})
 	s.LastUpdated = time.Now()
 }
 
+// AddUserMessage adds a user message to the session
+func (s *Chat) AddUserMessage(content any) {
+	s.AddRoleContent("user", content)
+}
+
 // AddAssistantMessage adds an assistant message to the session
-func (s *Chat) AddAssistantMessage(content string) {
-	s.Messages = append(s.Messages, Message{
-		Role:    "assistant",
-		Content: content,
-	})
-	s.LastUpdated = time.Now()
+func (s *Chat) AddAssistantMessage(content any) {
+	s.AddRoleContent("assistant", content)
 }
 
 // AddAssistantToolCall adds an assistant message with tool calls
