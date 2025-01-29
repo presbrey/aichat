@@ -95,6 +95,15 @@ func (chat *Chat) LastMessage() *Message {
 	return &chat.Messages[len(chat.Messages)-1]
 }
 
+// LastMessageRole returns the role of the last message in the chat
+func (chat *Chat) LastMessageRole() string {
+	msg := chat.LastMessage()
+	if msg == nil {
+		return ""
+	}
+	return msg.Role
+}
+
 // Range iterates through messages
 func (chat *Chat) Range(fn func(msg Message) error) error {
 	for _, msg := range chat.Messages {

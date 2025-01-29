@@ -91,3 +91,129 @@ func TestChatWithAssistantMessage(t *testing.T) {
 		t.Errorf("Expected content %q, got %q", content, session.Messages[0].ContentString())
 	}
 }
+
+func TestLastMessage(t *testing.T) {
+	s3 := newMockS3()
+	chat := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
+
+	// Test empty chat
+	if msg := chat.LastMessage(); msg != nil {
+		t.Errorf("Expected nil message for empty chat, got %v", msg)
+	}
+
+	// Add a message and test
+	chat.AddUserMessage("Hello")
+	msg := chat.LastMessage()
+	if msg == nil {
+		t.Fatal("Expected non-nil message after adding user message")
+	}
+	if msg.Content != "Hello" || msg.Role != "user" {
+		t.Errorf("Expected last message with content 'Hello' and role 'user', got content '%s' and role '%s'", msg.Content, msg.Role)
+	}
+
+	// Add another message and test
+	chat.AddAssistantMessage("Hi there")
+	msg = chat.LastMessage()
+	if msg == nil {
+		t.Fatal("Expected non-nil message after adding assistant message")
+	}
+	if msg.Content != "Hi there" || msg.Role != "assistant" {
+		t.Errorf("Expected last message with content 'Hi there' and role 'assistant', got content '%s' and role '%s'", msg.Content, msg.Role)
+	}
+}
+
+func TestLastMessageRole(t *testing.T) {
+	s3 := newMockS3()
+	chat := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
+
+	// Test empty chat
+	if role := chat.LastMessageRole(); role != "" {
+		t.Errorf("Expected empty role for empty chat, got %q", role)
+	}
+
+	// Test user message
+	chat.AddUserMessage("Hello")
+	if role := chat.LastMessageRole(); role != "user" {
+		t.Errorf("Expected role 'user', got %q", role)
+	}
+
+	// Test assistant message
+	chat.AddAssistantMessage("Hi there")
+	if role := chat.LastMessageRole(); role != "assistant" {
+		t.Errorf("Expected role 'assistant', got %q", role)
+	}
+}
+
+func TestAddToolContent(t *testing.T) {
+	s3 := newMockS3()
+	chat := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
+	toolCallID := "test_call_id"
+	toolName := "test_tool"
+
+	testCases := []struct {
+		name        string
+		content     any
+		wantErr     bool
+		wantContent string
+	}{
+		{
+			name:        "string content",
+			content:     "test string",
+			wantErr:     false,
+			wantContent: "test string",
+		},
+		{
+			name:        "byte slice content",
+			content:     []byte("test bytes"),
+			wantErr:     false,
+			wantContent: "test bytes",
+		},
+		{
+			name: "struct content",
+			content: struct {
+				Key   string `json:"key"`
+				Value int    `json:"value"`
+			}{
+				Key:   "test",
+				Value: 123,
+			},
+			wantErr:     false,
+			wantContent: `{"key":"test","value":123}`,
+		},
+		{
+			name:        "map content",
+			content:     map[string]string{"key": "value"},
+			wantErr:     false,
+			wantContent: `{"key":"value"}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := chat.AddToolContent(toolName, toolCallID, tc.content)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("AddToolContent() error = %v, wantErr %v", err, tc.wantErr)
+				return
+			}
+
+			if !tc.wantErr {
+				lastMsg := chat.LastMessage()
+				if lastMsg == nil {
+					t.Fatal("Expected message to be added")
+				}
+				if lastMsg.Role != "tool" {
+					t.Errorf("Expected role 'tool', got %q", lastMsg.Role)
+				}
+				if lastMsg.Name != toolName {
+					t.Errorf("Expected tool name %q, got %q", toolName, lastMsg.Name)
+				}
+				if lastMsg.ToolCallID != toolCallID {
+					t.Errorf("Expected tool call ID %q, got %q", toolCallID, lastMsg.ToolCallID)
+				}
+				if lastMsg.Content != tc.wantContent {
+					t.Errorf("Expected content %q, got %q", tc.wantContent, lastMsg.Content)
+				}
+			}
+		})
+	}
+}
