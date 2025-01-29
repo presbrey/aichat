@@ -30,7 +30,7 @@ type Chat struct {
 	Options Options `json:"-"`
 }
 
-// AddRoleContent adds a role and content to the c
+// AddRoleContent adds a role and content to the chat
 func (chat *Chat) AddRoleContent(role string, content any) {
 	chat.Messages = append(chat.Messages, Message{
 		Role:    role,
@@ -39,13 +39,13 @@ func (chat *Chat) AddRoleContent(role string, content any) {
 	chat.LastUpdated = time.Now()
 }
 
-// AddUserMessage adds a user message to the chat
-func (chat *Chat) AddUserMessage(content any) {
+// AddUserContent adds a user message to the chat
+func (chat *Chat) AddUserContent(content any) {
 	chat.AddRoleContent("user", content)
 }
 
-// AddAssistantMessage adds an assistant message to the chat
-func (chat *Chat) AddAssistantMessage(content any) {
+// AddAssistantContent adds an assistant message to the chat
+func (chat *Chat) AddAssistantContent(content any) {
 	chat.AddRoleContent("assistant", content)
 }
 
