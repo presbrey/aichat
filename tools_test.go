@@ -264,6 +264,24 @@ func TestToolCallContext(t *testing.T) {
 			returnResult:  nil,
 			wantError:     false,
 		},
+		{
+			name: "unmarshalable result",
+			toolCall: &aichat.ToolCall{
+				ID:   "test3",
+				Type: "function",
+				Function: aichat.Function{
+					Name:      "testFunc",
+					Arguments: `{}`,
+				},
+			},
+			wantName:      "testFunc",
+			wantArgs:      map[string]interface{}{},
+			wantArgsError: false,
+			returnResult: map[string]interface{}{
+				"channel": make(chan int), // channels cannot be marshaled to JSON
+			},
+			wantError: true,
+		},
 	}
 
 	for _, tt := range tests {
