@@ -34,7 +34,7 @@ func (f *Function) ArgumentsMap() (map[string]interface{}, error) {
 // RangePendingToolCalls iterates through messages to find and process tool calls that haven't received a response.
 // It performs two passes: first to identify which tool calls have responses, then to process pending calls.
 // The provided function is called for each pending tool call.
-func (chat *Chat) RangePendingToolCalls(fn func(toolCall *ToolCallMessage) error) error {
+func (chat *Chat) RangePendingToolCalls(fn func(toolCallContext *ToolCallContext) error) error {
 	// Create a map to track which tool calls have responses
 	responded := make(map[string]bool)
 
@@ -45,47 +45,49 @@ func (chat *Chat) RangePendingToolCalls(fn func(toolCall *ToolCallMessage) error
 		}
 	}
 
-	// Second pass: call the tool
-	for _, msg := range chat.Messages {
-		for _, call := range msg.ToolCalls {
-			if !responded[call.ID] {
-				if err := fn(&ToolCallMessage{
-					Chat:     chat,
-					ToolCall: &call,
-				}); err != nil {
-					return err
-				}
-				responded[call.ID] = true
-			}
+	return chat.Range(func(msg Message) error {
+		if len(msg.ToolCalls) == 0 {
+			return nil
 		}
-	}
-
-	return nil
+		for _, call := range msg.ToolCalls {
+			if responded[call.ID] {
+				continue
+			}
+			if err := fn(&ToolCallContext{
+				Chat:     chat,
+				ToolCall: &call,
+			}); err != nil {
+				return err
+			}
+			responded[call.ID] = true
+		}
+		return nil
+	})
 }
 
-// ToolCallMessage represents a tool call within a chat context, managing the lifecycle
+// ToolCallContext represents a tool call within a chat context, managing the lifecycle
 // of a single tool invocation including its execution and response handling.
-type ToolCallMessage struct {
+type ToolCallContext struct {
 	ToolCall *ToolCall
 	Chat     *Chat
 }
 
 // Name returns the name of the function
-func (tcs *ToolCallMessage) Name() string {
-	return tcs.ToolCall.Function.Name
+func (tcc *ToolCallContext) Name() string {
+	return tcc.ToolCall.Function.Name
 }
 
 // Arguments returns the arguments to the function as a map
-func (tcs *ToolCallMessage) Arguments() (map[string]any, error) {
-	return tcs.ToolCall.Function.ArgumentsMap()
+func (tcc *ToolCallContext) Arguments() (map[string]any, error) {
+	return tcc.ToolCall.Function.ArgumentsMap()
 }
 
 // Return sends the result of the function call back to the chat
-func (tcs *ToolCallMessage) Return(result map[string]any) error {
+func (tcc *ToolCallContext) Return(result map[string]any) error {
 	jsonData, err := json.Marshal(result)
 	if err != nil {
 		return fmt.Errorf("failed to marshal result: %v", err)
 	}
-	tcs.Chat.AddToolResponse(tcs.Name(), tcs.ToolCall.ID, string(jsonData))
+	tcc.Chat.AddToolContent(tcc.Name(), tcc.ToolCall.ID, string(jsonData))
 	return nil
 }

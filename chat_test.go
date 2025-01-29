@@ -30,7 +30,7 @@ func TestChat(t *testing.T) {
 	session.AddAssistantToolCall(toolCalls)
 
 	// Test adding tool response
-	session.AddToolResponse(
+	session.AddToolContent(
 		"get_current_weather",
 		"call_9pw1qnYScqvGrCH58HWCvFH6",
 		`{"temperature": "22", "unit": "celsius", "description": "Sunny"}`,

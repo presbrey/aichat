@@ -50,8 +50,8 @@ func TestChatStorage(t *testing.T) {
 
 	// Add some test data
 	session.AddUserMessage("Test message")
-	session.Metadata = make(map[string]any)
-	session.Metadata["test"] = "value"
+	session.Meta = make(map[string]any)
+	session.Meta["test"] = "value"
 
 	// Test saving
 	err := session.Save(ctx, "test-key")
@@ -75,8 +75,8 @@ func TestChatStorage(t *testing.T) {
 		t.Errorf("Expected %d messages, got %d", len(session.Messages), len(loadedSession.Messages))
 	}
 
-	if loadedSession.Metadata["test"] != "value" {
-		t.Errorf("Expected metadata value 'value', got %v", loadedSession.Metadata["test"])
+	if loadedSession.Meta["test"] != "value" {
+		t.Errorf("Expected metadata value 'value', got %v", loadedSession.Meta["test"])
 	}
 
 	err = loadedSession.Delete(ctx, "test-key")

@@ -24,13 +24,13 @@ type Chat struct {
 	Created time.Time `json:"created"`
 	// LastUpdated is the timestamp of the most recent message or modification
 	LastUpdated time.Time `json:"last_updated"`
-	// Metadata stores arbitrary session-related data
-	Metadata map[string]any `json:"metadata,omitempty"`
+	// Meta stores arbitrary session-related data
+	Meta map[string]any `json:"meta,omitempty"`
 	// Options contains the configuration for these chat sessions
 	Options Options `json:"-"`
 }
 
-// AddRoleContent adds a role and content to the session
+// AddRoleContent adds a role and content to the c
 func (chat *Chat) AddRoleContent(role string, content any) {
 	chat.Messages = append(chat.Messages, Message{
 		Role:    role,
@@ -39,14 +39,42 @@ func (chat *Chat) AddRoleContent(role string, content any) {
 	chat.LastUpdated = time.Now()
 }
 
-// AddUserMessage adds a user message to the session
+// AddUserMessage adds a user message to the chat
 func (chat *Chat) AddUserMessage(content any) {
 	chat.AddRoleContent("user", content)
 }
 
-// AddAssistantMessage adds an assistant message to the session
+// AddAssistantMessage adds an assistant message to the chat
 func (chat *Chat) AddAssistantMessage(content any) {
 	chat.AddRoleContent("assistant", content)
+}
+
+// AddToolRawContent adds a raw content to the chat
+func (chat *Chat) AddToolRawContent(name string, toolCallID string, content any) {
+	chat.Messages = append(chat.Messages, Message{
+		Role:       "tool",
+		Name:       name,
+		ToolCallID: toolCallID,
+		Content:    content,
+	})
+	chat.LastUpdated = time.Now()
+}
+
+// AddToolContent adds a tool content to the chat
+func (chat *Chat) AddToolContent(name string, toolCallID string, content any) error {
+	switch contentT := content.(type) {
+	case []byte:
+		content = string(contentT)
+	case string:
+	default:
+		b, err := json.Marshal(contentT)
+		if err != nil {
+			return err
+		}
+		content = string(b)
+	}
+	chat.AddToolRawContent(name, toolCallID, content)
+	return nil
 }
 
 // AddAssistantToolCall adds an assistant message with tool calls
@@ -59,18 +87,25 @@ func (chat *Chat) AddAssistantToolCall(toolCalls []ToolCall) {
 	chat.LastUpdated = time.Now()
 }
 
-// AddToolResponse adds a tool response message
-func (chat *Chat) AddToolResponse(name, toolCallID, content string) {
-	chat.Messages = append(chat.Messages, Message{
-		Role:       "tool",
-		Name:       name,
-		ToolCallID: toolCallID,
-		Content:    content,
-	})
-	chat.LastUpdated = time.Now()
+// LastMessage returns the last message in the chat
+func (chat *Chat) LastMessage() *Message {
+	if len(chat.Messages) == 0 {
+		return nil
+	}
+	return &chat.Messages[len(chat.Messages)-1]
 }
 
-// MarshalJSON implements custom JSON marshaling for the session
+// Range iterates through messages
+func (chat *Chat) Range(fn func(msg Message) error) error {
+	for _, msg := range chat.Messages {
+		if err := fn(msg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// MarshalJSON implements custom JSON marshaling for the chat
 func (chat *Chat) MarshalJSON() ([]byte, error) {
 	type Alias Chat
 	return json.Marshal(&struct {
@@ -80,7 +115,7 @@ func (chat *Chat) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// UnmarshalJSON implements custom JSON unmarshaling for the session
+// UnmarshalJSON implements custom JSON unmarshaling for the chat
 func (chat *Chat) UnmarshalJSON(data []byte) error {
 	type Alias Chat
 	aux := &struct {
@@ -89,7 +124,7 @@ func (chat *Chat) UnmarshalJSON(data []byte) error {
 		Alias: (*Alias)(chat),
 	}
 	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("failed to unmarshal session: %v", err)
+		return fmt.Errorf("failed to unmarshal chat: %v", err)
 	}
 	return nil
 }
