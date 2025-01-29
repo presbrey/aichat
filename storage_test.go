@@ -3,6 +3,7 @@ package aichat_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -41,6 +42,23 @@ func (m *mockS3) Put(ctx context.Context, key string, data io.Reader) error {
 func (m *mockS3) Delete(ctx context.Context, key string) error {
 	delete(m.data, key)
 	return nil
+}
+
+// mockS3WithErrors is a mock S3 implementation that returns errors
+type mockS3WithErrors struct {
+	mockS3
+	shouldErrorOnGet bool
+	returnInvalidJSON bool
+}
+
+func (m *mockS3WithErrors) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+	if m.shouldErrorOnGet {
+		return nil, fmt.Errorf("mock get error")
+	}
+	if m.returnInvalidJSON {
+		return io.NopCloser(strings.NewReader("invalid json")), nil
+	}
+	return m.mockS3.Get(ctx, key)
 }
 
 func TestChatStorage(t *testing.T) {
@@ -98,6 +116,53 @@ func TestStorageErrors(t *testing.T) {
 	if err := session.Load(ctx, "test-key"); err == nil {
 		t.Error("Expected error when loading with nil S3")
 	}
+
+	t.Run("get error", func(t *testing.T) {
+		s3 := &mockS3WithErrors{shouldErrorOnGet: true}
+		chat := &aichat.Chat{Options: aichat.Options{S3: s3}}
+		
+		err := chat.Load(ctx, "test-key")
+		if err == nil {
+			t.Error("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to get session from storage") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("decode error", func(t *testing.T) {
+		s3 := &mockS3WithErrors{returnInvalidJSON: true}
+		chat := &aichat.Chat{Options: aichat.Options{S3: s3}}
+		
+		err := chat.Load(ctx, "test-key")
+		if err == nil {
+			t.Error("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to decode chat data") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("marshal error", func(t *testing.T) {
+		s3 := newMockS3()
+		chat := &aichat.Chat{
+			Options: aichat.Options{S3: s3},
+			Messages: []aichat.Message{
+				{
+					Role: "user",
+					Content: make(chan int), // channels cannot be marshaled to JSON
+				},
+			},
+		}
+
+		err := chat.Save(ctx, "test-key")
+		if err == nil {
+			t.Error("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to marshal chat data") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
 }
 
 func TestNewStorage(t *testing.T) {

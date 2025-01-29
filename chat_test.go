@@ -217,3 +217,43 @@ func TestAddToolContent(t *testing.T) {
 		})
 	}
 }
+
+func TestAddToolContentError(t *testing.T) {
+	chat := &aichat.Chat{}
+	
+	// Create a struct that will fail JSON marshaling
+	badContent := make(chan int)
+	
+	err := chat.AddToolContent("test", "test-id", badContent)
+	if err == nil {
+		t.Error("Expected error when marshaling invalid content, got nil")
+	}
+}
+
+func TestUnmarshalJSONError(t *testing.T) {
+	chat := &aichat.Chat{}
+	
+	// Invalid JSON that will cause an unmarshal error
+	invalidJSON := []byte(`{"messages": [{"role": "user", "content": invalid}]}`)
+	
+	err := chat.UnmarshalJSON(invalidJSON)
+	if err == nil {
+		t.Error("Expected error when unmarshaling invalid JSON, got nil")
+	}
+}
+
+func TestContentPartsError(t *testing.T) {
+	msg := &aichat.Message{
+		Role: "user",
+		// Content that will fail JSON marshaling
+		Content: []interface{}{make(chan int)},
+	}
+	
+	parts, err := msg.ContentParts()
+	if err == nil {
+		t.Error("Expected error when processing invalid content parts, got nil")
+	}
+	if parts != nil {
+		t.Error("Expected nil parts when error occurs")
+	}
+}
