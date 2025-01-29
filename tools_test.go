@@ -216,7 +216,7 @@ func TestRangePendingToolCalls(t *testing.T) {
 	})
 }
 
-func TestToolCallMessage(t *testing.T) {
+func TestToolCallContext(t *testing.T) {
 	tests := []struct {
 		name          string
 		toolCall      *aichat.ToolCall
