@@ -14,7 +14,7 @@ func TestChat(t *testing.T) {
 	session := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
 
 	// Test adding user message
-	session.AddUserMessage("What is the weather like in Boston?")
+	session.AddUserContent("What is the weather like in Boston?")
 
 	// Test adding assistant tool call
 	toolCalls := []aichat.ToolCall{
@@ -81,7 +81,7 @@ func TestChatWithAssistantMessage(t *testing.T) {
 	session := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
 
 	content := "The weather in Boston is sunny and 22°C."
-	session.AddAssistantMessage(content)
+	session.AddAssistantContent(content)
 
 	if len(session.Messages) != 1 {
 		t.Errorf("Expected 1 message, got %d", len(session.Messages))
@@ -102,7 +102,7 @@ func TestLastMessage(t *testing.T) {
 	}
 
 	// Add a message and test
-	chat.AddUserMessage("Hello")
+	chat.AddUserContent("Hello")
 	msg := chat.LastMessage()
 	if msg == nil {
 		t.Fatal("Expected non-nil message after adding user message")
@@ -112,7 +112,7 @@ func TestLastMessage(t *testing.T) {
 	}
 
 	// Add another message and test
-	chat.AddAssistantMessage("Hi there")
+	chat.AddAssistantContent("Hi there")
 	msg = chat.LastMessage()
 	if msg == nil {
 		t.Fatal("Expected non-nil message after adding assistant message")
@@ -132,13 +132,13 @@ func TestLastMessageRole(t *testing.T) {
 	}
 
 	// Test user message
-	chat.AddUserMessage("Hello")
+	chat.AddUserContent("Hello")
 	if role := chat.LastMessageRole(); role != "user" {
 		t.Errorf("Expected role 'user', got %q", role)
 	}
 
 	// Test assistant message
-	chat.AddAssistantMessage("Hi there")
+	chat.AddAssistantContent("Hi there")
 	if role := chat.LastMessageRole(); role != "assistant" {
 		t.Errorf("Expected role 'assistant', got %q", role)
 	}

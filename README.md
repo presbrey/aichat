@@ -107,6 +107,36 @@ err = chat.Load("chat-123")
 err = chat.Delete("chat-123")
 ```
 
+### Direct Access and Helper Methods
+
+The `Chat` and `Message` structs are designed to be transparent - you are welcome to access their members directly in your applications. For example, you can directly access `chat.Messages`, `chat.Meta`, or `message.Role`.
+
+For convenience, the package also provides several helper methods:
+
+- `AddRoleContent(role, content)`: Add a message with any role and content
+- `AddUserContent(content)`: Add a user message
+- `AddAssistantContent(content)`: Add an assistant message
+- `AddToolRawContent(name, toolCallID, content)`: Add a tool message with raw content
+- `AddToolContent(name, toolCallID, content)`: Add a tool message with JSON-encoded content if needed
+- `AddAssistantToolCall(toolCalls)`: Add an assistant message with tool calls
+- `LastMessage()`: Get the most recent message
+- `LastMessageRole()`: Get the role of the most recent message
+- `Range(fn)`: Iterate through messages with a callback function
+
+```go
+// Example of direct member access
+fmt.Println(chat.ID, chat.LastUpdated)
+for _, msg := range chat.Messages {
+    fmt.Println(msg.Role, msg.Content)
+}
+
+// Example of helper method usage
+chat.AddUserContent("Hello")
+if last := chat.LastMessage(); last != nil {
+    fmt.Println("Last message was from:", last.Role)
+}
+```
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

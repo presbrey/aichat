@@ -67,7 +67,7 @@ func TestChatStorage(t *testing.T) {
 	session := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
 
 	// Add some test data
-	session.AddUserMessage("Test message")
+	session.AddUserContent("Test message")
 	session.Meta = make(map[string]any)
 	session.Meta["test"] = "value"
 
@@ -191,7 +191,7 @@ func TestStorageLoad(t *testing.T) {
 		ID:      "test-id",
 		Options: opts,
 	}
-	originalChat.AddUserMessage("Test message")
+	originalChat.AddUserContent("Hello")
 	if err := originalChat.Save(ctx, "test-key"); err != nil {
 		t.Fatalf("Failed to save chat: %v", err)
 	}
