@@ -17,12 +17,6 @@ A Go package for managing AI chat sessions with support for message history, too
 - Metadata storage for sessions
 - JSON serialization
 
-## Installation
-
-```bash
-go get github.com/presbrey/aichat
-```
-
 ## Usage
 
 ### Creating a New Chat
@@ -42,72 +36,7 @@ storage := aichat.NewChatStorage(options)
 chat, err := storage.Load("chat-123")
 ```
 
-### Managing Messages
-
-```go
-// Add messages
-chat.AddUserMessage("Hello!")
-chat.AddAssistantMessage("Hi! How can I help?")
-
-// Add tool/function calls
-toolCalls := []aichat.ToolCall{
-    {
-        ID:   "call-123",
-        Type: "function",
-        Function: aichat.Function{
-            Name:      "get_weather",
-            Arguments: `{"location": "Boston"}`,
-        },
-    },
-}
-chat.AddAssistantToolCall(toolCalls)
-
-// Add tool response
-chat.AddToolResponse("get_weather", "call-123", `{"temp": 72, "condition": "sunny"}`)
-```
-
-### Working with Content
-
-```go
-// Handle text content
-textMsg := chat.Messages[0].ContentString()
-
-// Handle rich content (text/images)
-if parts, err := message.ContentParts(); err == nil {
-    for _, part := range parts {
-        switch part.Type {
-        case "text":
-            fmt.Println("Text:", part.Text)
-        case "image_url":
-            fmt.Println("Image:", part.ImageURL.URL)
-        }
-    }
-}
-
-// Parse tool arguments
-if toolCall := chat.Messages[2].ToolCalls[0]; toolCall.Type == "function" {
-    args, err := toolCall.Function.ArgumentsMap()
-    if err == nil {
-        location := args["location"].(string)
-        fmt.Println("Weather lookup for:", location)
-    }
-}
-```
-
-### Storage Operations
-
-```go
-// Save chat state
-err := chat.Save("chat-123")
-
-// Load existing chat
-err = chat.Load("chat-123")
-
-// Delete chat
-err = chat.Delete("chat-123")
-```
-
-### Direct Access and Helper Methods
+### Convinence Methods and Direct Access
 
 The `Chat` and `Message` structs are designed to be transparent - you are welcome to access their members directly in your applications. For example, you can directly access `chat.Messages`, `chat.Meta`, or `message.Role`.
 
@@ -124,17 +53,68 @@ For convenience, the package also provides several helper methods:
 - `Range(fn)`: Iterate through messages with a callback function
 
 ```go
+// Example of helper method usage
+chat.AddUserContent("Hello")
+chat.AddAssistantContent("Hi! How can I help?")
+if last := chat.LastMessage(); last != nil {
+    fmt.Println("Last message was from:", last.Role) // "assistant"
+}
+
 // Example of direct member access
 fmt.Println(chat.ID, chat.LastUpdated)
 for _, msg := range chat.Messages {
     fmt.Println(msg.Role, msg.Content)
 }
 
-// Example of helper method usage
-chat.AddUserContent("Hello")
-if last := chat.LastMessage(); last != nil {
-    fmt.Println("Last message was from:", last.Role)
+// Add tool/function calls
+toolCalls := []aichat.ToolCall{
+    {
+        ID:   "call-123",
+        Type: "function",
+        Function: aichat.Function{
+            Name:      "get_weather",
+            Arguments: `{"location": "Boston"}`,
+        },
+    },
 }
+chat.AddAssistantToolCall(toolCalls)
+```
+
+### Working with Strings and Multi-Part Content
+
+The `Message` struct provides a `ContentString()` method that returns the content as a string if it is a simple string.
+The `ContentParts()` method returns the content as a slice of `Part` structs if it is a multipart message.
+
+```go
+// Handle text content
+textMsg := chat.Messages[0].ContentString()
+
+// Handle rich content (text/images)
+if parts, err := message.ContentParts(); err == nil {
+    for _, part := range parts {
+        switch part.Type {
+        case "text":
+            fmt.Println("Text:", part.Text)
+        case "image_url":
+            fmt.Println("Image:", part.ImageURL.URL)
+        }
+    }
+}
+```
+
+### Storage Operations
+
+The `Chat` struct provides methods for saving, loading, and deleting chat sessions. Pass a key (string) that will be used to lookup the chat in the storage backend.
+
+```go
+// Save chat state
+err := chat.Save("chat-123")
+
+// Load existing chat
+err = chat.Load("chat-123")
+
+// Delete chat
+err = chat.Delete("chat-123")
 ```
 
 ## Contributing
