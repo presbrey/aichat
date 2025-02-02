@@ -22,23 +22,18 @@ A Go package for managing AI chat sessions with support for message history, too
 ### Creating a New Chat
 
 ```go
-import "github.com/presbrey/aichat"
+// Create new chat in-memory
+chat := new(aichat.Chat)
 
-// Initialize with S3 storage
-s3Storage := YourS3Implementation{} // Implements aichat.S3 interface
-options := aichat.Options{S3: s3Storage}
-
-// Create new chat
-chat := aichat.NewChat("chat-123", options)
-
-// Or use storage wrapper
-storage := aichat.NewChatStorage(options)
-chat, err := storage.Load("chat-123")
+// Or use persistent/S3-compatible storage wrapper
+opts := aichat.Options{...}
+storage := aichat.NewChatStorage(opts)
+chat, err := storage.Load("chat-f00ba0ba0")
 ```
 
 ### Convinence Methods and Direct Access
 
-The `Chat` and `Message` structs are designed to be transparent - you are welcome to access their members directly in your applications. For example, you can directly access `chat.Messages`, `chat.Meta`, or `message.Role`.
+The `Chat`, `Message`, and `ToolCall` structs are designed to be transparent - you are welcome to access their members directly in your applications. For example, you can directly access `chat.Messages`, `chat.Meta`, or `message.Role`.
 
 For convenience, the package also provides several helper methods:
 
@@ -50,7 +45,14 @@ For convenience, the package also provides several helper methods:
 - `AddAssistantToolCall(toolCalls)`: Add an assistant message with tool calls
 - `LastMessage()`: Get the most recent message
 - `LastMessageRole()`: Get the role of the most recent message
+- `LastMessageByRole(role)`: Get the last message with a specific role
+- `LastMessageByType(contentType)`: Get the last message with a specific content type
 - `Range(fn)`: Iterate through messages with a callback function
+- `RangeByRole(role, fn)`: Iterate through messages with a specific role
+- `MessageCount()`: Get the total number of messages in the chat
+- `MessageCountByRole(role)`: Get the count of messages with a specific role
+- `ClearMessages()`: Remove all messages from the chat
+- `RemoveLastMessage()`: Remove and return the last message from the chat
 
 ```go
 // Example of helper method usage

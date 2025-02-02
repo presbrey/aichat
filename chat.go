@@ -87,6 +87,12 @@ func (chat *Chat) AddAssistantToolCall(toolCalls []ToolCall) {
 	chat.LastUpdated = time.Now()
 }
 
+// ClearMessages removes all messages from the chat
+func (chat *Chat) ClearMessages() {
+	chat.Messages = []Message{}
+	chat.LastUpdated = time.Now()
+}
+
 // LastMessage returns the last message in the chat
 func (chat *Chat) LastMessage() *Message {
 	if len(chat.Messages) == 0 {
@@ -118,6 +124,35 @@ func (chat *Chat) LastMessageRole() string {
 	return msg.Role
 }
 
+// LastMessageByType returns the last message in the chat with the given content type
+func (chat *Chat) LastMessageByType(contentType string) *Message {
+	for i := len(chat.Messages) - 1; i >= 0; i-- {
+		msg := chat.Messages[i]
+		if content, ok := msg.Content.(map[string]interface{}); ok {
+			if t, ok := content["type"].(string); ok && t == contentType {
+				return &chat.Messages[i]
+			}
+		}
+	}
+	return nil
+}
+
+// MessageCount returns the total number of messages in the chat
+func (chat *Chat) MessageCount() int {
+	return len(chat.Messages)
+}
+
+// MessageCountByRole returns the number of messages with a specific role
+func (chat *Chat) MessageCountByRole(role string) int {
+	count := 0
+	for _, msg := range chat.Messages {
+		if msg.Role == role {
+			count++
+		}
+	}
+	return count
+}
+
 // Range iterates through messages
 func (chat *Chat) Range(fn func(msg Message) error) error {
 	for _, msg := range chat.Messages {
@@ -126,6 +161,29 @@ func (chat *Chat) Range(fn func(msg Message) error) error {
 		}
 	}
 	return nil
+}
+
+// RangeByRole iterates through messages with a specific role
+func (chat *Chat) RangeByRole(role string, fn func(msg Message) error) error {
+	for _, msg := range chat.Messages {
+		if msg.Role == role {
+			if err := fn(msg); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// RemoveLastMessage removes and returns the last message from the chat
+func (chat *Chat) RemoveLastMessage() *Message {
+	if len(chat.Messages) == 0 {
+		return nil
+	}
+	lastMsg := chat.Messages[len(chat.Messages)-1]
+	chat.Messages = chat.Messages[:len(chat.Messages)-1]
+	chat.LastUpdated = time.Now()
+	return &lastMsg
 }
 
 // MarshalJSON implements custom JSON marshaling for the chat

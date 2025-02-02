@@ -3,6 +3,9 @@ package aichat_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/presbrey/aichat"
@@ -220,10 +223,10 @@ func TestAddToolContent(t *testing.T) {
 
 func TestAddToolContentError(t *testing.T) {
 	chat := &aichat.Chat{}
-	
+
 	// Create a struct that will fail JSON marshaling
 	badContent := make(chan int)
-	
+
 	err := chat.AddToolContent("test", "test-id", badContent)
 	if err == nil {
 		t.Error("Expected error when marshaling invalid content, got nil")
@@ -232,10 +235,10 @@ func TestAddToolContentError(t *testing.T) {
 
 func TestUnmarshalJSONError(t *testing.T) {
 	chat := &aichat.Chat{}
-	
+
 	// Invalid JSON that will cause an unmarshal error
 	invalidJSON := []byte(`{"messages": [{"role": "user", "content": invalid}]}`)
-	
+
 	err := chat.UnmarshalJSON(invalidJSON)
 	if err == nil {
 		t.Error("Expected error when unmarshaling invalid JSON, got nil")
@@ -248,7 +251,7 @@ func TestContentPartsError(t *testing.T) {
 		// Content that will fail JSON marshaling
 		Content: []interface{}{make(chan int)},
 	}
-	
+
 	parts, err := msg.ContentParts()
 	if err == nil {
 		t.Error("Expected error when processing invalid content parts, got nil")
@@ -294,5 +297,152 @@ func TestLastMessageByRole(t *testing.T) {
 	// Test non-existent role
 	if msg := chat.LastMessageByRole("nonexistent"); msg != nil {
 		t.Error("Expected nil for non-existent role")
+	}
+}
+
+func TestLastMessageByType(t *testing.T) {
+	chat := new(aichat.Chat)
+
+	// Add messages with different content types
+	chat.AddRoleContent("user", map[string]interface{}{
+		"type": "text",
+		"text": "Hello",
+	})
+	chat.AddRoleContent("assistant", map[string]interface{}{
+		"type": "image",
+		"url":  "test.jpg",
+	})
+	chat.AddRoleContent("user", map[string]interface{}{
+		"type": "text",
+		"text": "World",
+	})
+
+	// Test finding last message of each type
+	textMsg := chat.LastMessageByType("text")
+	if textMsg == nil || textMsg.Content.(map[string]interface{})["text"] != "World" {
+		t.Error("Expected last text message to be 'World'")
+	}
+
+	imageMsg := chat.LastMessageByType("image")
+	if imageMsg == nil || imageMsg.Content.(map[string]interface{})["url"] != "test.jpg" {
+		t.Error("Expected last image message to have URL 'test.jpg'")
+	}
+
+	// Test non-existent type
+	audioMsg := chat.LastMessageByType("audio")
+	if audioMsg != nil {
+		t.Error("Expected no message for non-existent type")
+	}
+}
+
+func TestMessageCount(t *testing.T) {
+	chat := new(aichat.Chat)
+
+	if chat.MessageCount() != 0 {
+		t.Error("Expected empty chat to have 0 messages")
+	}
+
+	chat.AddUserContent("Hello")
+	chat.AddAssistantContent("Hi")
+	chat.AddUserContent("How are you?")
+
+	if chat.MessageCount() != 3 {
+		t.Errorf("Expected 3 messages, got %d", chat.MessageCount())
+	}
+
+	chat.ClearMessages()
+
+	if chat.MessageCount() != 0 {
+		t.Error("Expected empty chat to have 0 messages")
+	}
+}
+
+func TestMessageCountByRole(t *testing.T) {
+	chat := new(aichat.Chat)
+
+	chat.AddUserContent("Hello")
+	chat.AddAssistantContent("Hi")
+	chat.AddUserContent("How are you?")
+	chat.AddToolRawContent("test-tool", "123", "result")
+
+	tests := []struct {
+		role     string
+		expected int
+	}{
+		{"user", 2},
+		{"assistant", 1},
+		{"tool", 1},
+		{"system", 0},
+	}
+
+	for _, test := range tests {
+		count := chat.MessageCountByRole(test.role)
+		if count != test.expected {
+			t.Errorf("Expected %d messages for role '%s', got %d", test.expected, test.role, count)
+		}
+	}
+}
+
+func TestRangeByRole(t *testing.T) {
+	chat := new(aichat.Chat)
+
+	// Add test messages
+	chat.AddUserContent("U1")
+	chat.AddAssistantContent("A1")
+	chat.AddUserContent("U2")
+	chat.AddAssistantContent("A2")
+
+	// Test ranging over user messages
+	userMsgs := []string{}
+	err := chat.RangeByRole("user", func(msg aichat.Message) error {
+		content, ok := msg.Content.(string)
+		if !ok {
+			return fmt.Errorf("expected string content")
+		}
+		userMsgs = append(userMsgs, content)
+		return nil
+	})
+
+	if err != nil {
+		t.Error("Unexpected error:", err)
+	}
+	if !reflect.DeepEqual(userMsgs, []string{"U1", "U2"}) {
+		t.Errorf("Expected user messages [U1, U2], got %v", userMsgs)
+	}
+
+	// Test ranging with error
+	expectedErr := errors.New("test error")
+	err = chat.RangeByRole("assistant", func(msg aichat.Message) error {
+		return expectedErr
+	})
+	if err != expectedErr {
+		t.Error("Expected error to be propagated")
+	}
+}
+
+func TestRemoveLastMessage(t *testing.T) {
+	chat := new(aichat.Chat)
+
+	// Test removing from empty chat
+	if msg := chat.RemoveLastMessage(); msg != nil {
+		t.Error("Expected nil when removing from empty chat")
+	}
+
+	// Add and remove messages
+	chat.AddUserContent("First")
+	chat.AddAssistantContent("Second")
+	chat.AddUserContent("Third")
+
+	initialCount := chat.MessageCount()
+	lastMsg := chat.RemoveLastMessage()
+
+	if lastMsg == nil || lastMsg.Content != "Third" {
+		t.Error("Expected last message content to be 'Third'")
+	}
+	if chat.MessageCount() != initialCount-1 {
+		t.Error("Expected message count to decrease by 1")
+	}
+	if last := chat.LastMessage(); last == nil || last.Content != "Second" {
+		t.Error("Expected new last message to be 'Second'")
 	}
 }
