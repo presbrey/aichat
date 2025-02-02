@@ -43,15 +43,15 @@ For convenience, the package also provides several helper methods:
 - `AddToolRawContent(name, toolCallID, content)`: Add a tool message with raw content
 - `AddToolContent(name, toolCallID, content)`: Add a tool message with JSON-encoded content if needed
 - `AddAssistantToolCall(toolCalls)`: Add an assistant message with tool calls
+- `ClearMessages()`: Remove all messages from the chat
 - `LastMessage()`: Get the most recent message
 - `LastMessageRole()`: Get the role of the most recent message
 - `LastMessageByRole(role)`: Get the last message with a specific role
 - `LastMessageByType(contentType)`: Get the last message with a specific content type
-- `Range(fn)`: Iterate through messages with a callback function
-- `RangeByRole(role, fn)`: Iterate through messages with a specific role
 - `MessageCount()`: Get the total number of messages in the chat
 - `MessageCountByRole(role)`: Get the count of messages with a specific role
-- `ClearMessages()`: Remove all messages from the chat
+- `Range(fn)`: Iterate through messages with a callback function
+- `RangeByRole(role, fn)`: Iterate through messages with a specific role
 - `RemoveLastMessage()`: Remove and return the last message from the chat
 
 ```go
