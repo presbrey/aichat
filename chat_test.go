@@ -269,7 +269,7 @@ func TestLastMessageByRole(t *testing.T) {
 	}
 
 	// Add messages with different roles
-	chat.Messages = []aichat.Message{
+	chat.Messages = []*aichat.Message{
 		{Role: "user", Content: "Hello"},
 		{Role: "assistant", Content: "Hi"},
 		{Role: "user", Content: "How are you?"},
@@ -394,7 +394,7 @@ func TestRangeByRole(t *testing.T) {
 
 	// Test ranging over user messages
 	userMsgs := []string{}
-	err := chat.RangeByRole("user", func(msg aichat.Message) error {
+	err := chat.RangeByRole("user", func(msg *aichat.Message) error {
 		content, ok := msg.Content.(string)
 		if !ok {
 			return fmt.Errorf("expected string content")
@@ -412,7 +412,7 @@ func TestRangeByRole(t *testing.T) {
 
 	// Test ranging with error
 	expectedErr := errors.New("test error")
-	err = chat.RangeByRole("assistant", func(msg aichat.Message) error {
+	err = chat.RangeByRole("assistant", func(msg *aichat.Message) error {
 		return expectedErr
 	})
 	if err != expectedErr {
@@ -445,4 +445,34 @@ func TestRemoveLastMessage(t *testing.T) {
 	if last := chat.LastMessage(); last == nil || last.Content != "Second" {
 		t.Error("Expected new last message to be 'Second'")
 	}
+}
+
+func TestAddMessage(t *testing.T) {
+	chat := &aichat.Chat{}
+	msg := &aichat.Message{Role: "user", Content: "test message"}
+
+	t.Run("add new message", func(t *testing.T) {
+		chat.AddMessage(msg)
+		if len(chat.Messages) != 1 {
+			t.Errorf("expected 1 message, got %d", len(chat.Messages))
+		}
+		if chat.Messages[0] != msg {
+			t.Error("message not added correctly")
+		}
+	})
+
+	t.Run("add same message twice", func(t *testing.T) {
+		chat.AddMessage(msg)
+		if len(chat.Messages) != 1 {
+			t.Errorf("expected 1 message, got %d", len(chat.Messages))
+		}
+	})
+
+	t.Run("add nil message", func(t *testing.T) {
+		originalLen := len(chat.Messages)
+		chat.AddMessage(nil)
+		if len(chat.Messages) != originalLen {
+			t.Errorf("expected %d messages, got %d", originalLen, len(chat.Messages))
+		}
+	})
 }

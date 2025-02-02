@@ -19,7 +19,7 @@ type Chat struct {
 	// Key is the storage key used for persistence
 	Key string `json:"key,omitempty"`
 	// Messages contains the chronological history of chat messages
-	Messages []Message `json:"messages"`
+	Messages []*Message `json:"messages"`
 	// Created is the timestamp when the chat session was created
 	Created time.Time `json:"created"`
 	// LastUpdated is the timestamp of the most recent message or modification
@@ -30,9 +30,23 @@ type Chat struct {
 	Options Options `json:"-"`
 }
 
+// AddMessage adds a message to the chat (idempotent)
+func (chat *Chat) AddMessage(message *Message) {
+	if message == nil {
+		return
+	}
+	for _, msg := range chat.Messages {
+		if msg == message {
+			return
+		}
+	}
+	chat.Messages = append(chat.Messages, message)
+	chat.LastUpdated = time.Now()
+}
+
 // AddRoleContent adds a role and content to the chat
 func (chat *Chat) AddRoleContent(role string, content any) {
-	chat.Messages = append(chat.Messages, Message{
+	chat.Messages = append(chat.Messages, &Message{
 		Role:    role,
 		Content: content,
 	})
@@ -51,7 +65,7 @@ func (chat *Chat) AddAssistantContent(content any) {
 
 // AddToolRawContent adds a raw content to the chat
 func (chat *Chat) AddToolRawContent(name string, toolCallID string, content any) {
-	chat.Messages = append(chat.Messages, Message{
+	chat.Messages = append(chat.Messages, &Message{
 		Role:       "tool",
 		Name:       name,
 		ToolCallID: toolCallID,
@@ -79,7 +93,7 @@ func (chat *Chat) AddToolContent(name string, toolCallID string, content any) er
 
 // AddAssistantToolCall adds an assistant message with tool calls
 func (chat *Chat) AddAssistantToolCall(toolCalls []ToolCall) {
-	chat.Messages = append(chat.Messages, Message{
+	chat.Messages = append(chat.Messages, &Message{
 		Role:      "assistant",
 		Content:   nil,
 		ToolCalls: toolCalls,
@@ -89,7 +103,7 @@ func (chat *Chat) AddAssistantToolCall(toolCalls []ToolCall) {
 
 // ClearMessages removes all messages from the chat
 func (chat *Chat) ClearMessages() {
-	chat.Messages = []Message{}
+	chat.Messages = []*Message{}
 	chat.LastUpdated = time.Now()
 }
 
@@ -98,7 +112,7 @@ func (chat *Chat) LastMessage() *Message {
 	if len(chat.Messages) == 0 {
 		return nil
 	}
-	return &chat.Messages[len(chat.Messages)-1]
+	return chat.Messages[len(chat.Messages)-1]
 }
 
 // LastMessageByRole returns the last message in the chat by role
@@ -109,7 +123,7 @@ func (chat *Chat) LastMessageByRole(role string) *Message {
 	for i := len(chat.Messages) - 1; i >= 0; i-- {
 		msg := chat.Messages[i]
 		if msg.Role == role {
-			return &msg
+			return msg
 		}
 	}
 	return nil
@@ -130,7 +144,7 @@ func (chat *Chat) LastMessageByType(contentType string) *Message {
 		msg := chat.Messages[i]
 		if content, ok := msg.Content.(map[string]interface{}); ok {
 			if t, ok := content["type"].(string); ok && t == contentType {
-				return &chat.Messages[i]
+				return msg
 			}
 		}
 	}
@@ -154,7 +168,7 @@ func (chat *Chat) MessageCountByRole(role string) int {
 }
 
 // Range iterates through messages
-func (chat *Chat) Range(fn func(msg Message) error) error {
+func (chat *Chat) Range(fn func(msg *Message) error) error {
 	for _, msg := range chat.Messages {
 		if err := fn(msg); err != nil {
 			return err
@@ -164,7 +178,7 @@ func (chat *Chat) Range(fn func(msg Message) error) error {
 }
 
 // RangeByRole iterates through messages with a specific role
-func (chat *Chat) RangeByRole(role string, fn func(msg Message) error) error {
+func (chat *Chat) RangeByRole(role string, fn func(msg *Message) error) error {
 	for _, msg := range chat.Messages {
 		if msg.Role == role {
 			if err := fn(msg); err != nil {
@@ -183,7 +197,7 @@ func (chat *Chat) RemoveLastMessage() *Message {
 	lastMsg := chat.Messages[len(chat.Messages)-1]
 	chat.Messages = chat.Messages[:len(chat.Messages)-1]
 	chat.LastUpdated = time.Now()
-	return &lastMsg
+	return lastMsg
 }
 
 // MarshalJSON implements custom JSON marshaling for the chat

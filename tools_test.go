@@ -145,13 +145,13 @@ func TestArgumentsMap(t *testing.T) {
 func TestRangePendingToolCalls(t *testing.T) {
 	tests := []struct {
 		name     string
-		messages []aichat.Message
+		messages []*aichat.Message
 		wantIDs  []string
 		wantErr  bool
 	}{
 		{
 			name: "no pending tool calls",
-			messages: []aichat.Message{
+			messages: []*aichat.Message{
 				{ToolCallID: "call1", Content: "response1"},
 				{ToolCalls: []aichat.ToolCall{{ID: "call1"}}},
 			},
@@ -160,7 +160,7 @@ func TestRangePendingToolCalls(t *testing.T) {
 		},
 		{
 			name: "one pending tool call",
-			messages: []aichat.Message{
+			messages: []*aichat.Message{
 				{ToolCalls: []aichat.ToolCall{{ID: "call1"}}},
 			},
 			wantIDs: []string{"call1"},
@@ -168,7 +168,7 @@ func TestRangePendingToolCalls(t *testing.T) {
 		},
 		{
 			name: "multiple pending tool calls",
-			messages: []aichat.Message{
+			messages: []*aichat.Message{
 				{ToolCalls: []aichat.ToolCall{{ID: "call1"}, {ID: "call2"}}},
 				{ToolCallID: "call1", Content: "response1"},
 			},
@@ -200,7 +200,7 @@ func TestRangePendingToolCalls(t *testing.T) {
 
 	t.Run("error case", func(t *testing.T) {
 		chat := &aichat.Chat{
-			Messages: []aichat.Message{
+			Messages: []*aichat.Message{
 				{ToolCalls: []aichat.ToolCall{{ID: "call1"}}},
 			},
 		}

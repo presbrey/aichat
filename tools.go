@@ -45,7 +45,7 @@ func (chat *Chat) RangePendingToolCalls(fn func(toolCallContext *ToolCallContext
 		}
 	}
 
-	return chat.Range(func(msg Message) error {
+	return chat.Range(func(msg *Message) error {
 		if len(msg.ToolCalls) == 0 {
 			return nil
 		}

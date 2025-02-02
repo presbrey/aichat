@@ -16,6 +16,7 @@ A Go package for managing AI chat sessions with support for message history, too
 - Rich content support including text and images
 - Metadata storage for sessions
 - JSON serialization
+- Idempotent message handling
 
 ## Usage
 
@@ -31,12 +32,31 @@ storage := aichat.NewChatStorage(opts)
 chat, err := storage.Load("chat-f00ba0ba0")
 ```
 
+### Adding Messages
+
+Messages can be added to a chat session in multiple ways:
+
+```go
+// Add a message directly (idempotent)
+chat.AddMessage(&aichat.Message{
+    Role: "user",
+    Content: "Hello!",
+})
+
+// Add user content (creates new message)
+chat.AddUserContent("Hello!")
+
+// Add assistant content (creates new message)
+chat.AddAssistantContent("Hi there!")
+```
+
 ### Convinence Methods and Direct Access
 
 The `Chat`, `Message`, and `ToolCall` structs are designed to be transparent - you are welcome to access their members directly in your applications. For example, you can directly access `chat.Messages`, `chat.Meta`, or `message.Role`.
 
 For convenience, the package also provides several helper methods:
 
+- `AddMessage(msg)`: Add a Message
 - `AddRoleContent(role, content)`: Add a message with any role and content
 - `AddUserContent(content)`: Add a user message
 - `AddAssistantContent(content)`: Add an assistant message
