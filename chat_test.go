@@ -257,3 +257,42 @@ func TestContentPartsError(t *testing.T) {
 		t.Error("Expected nil parts when error occurs")
 	}
 }
+
+func TestLastMessageByRole(t *testing.T) {
+	// Test empty chat
+	chat := &aichat.Chat{}
+	if msg := chat.LastMessageByRole("user"); msg != nil {
+		t.Error("Expected nil for empty chat")
+	}
+
+	// Add messages with different roles
+	chat.Messages = []aichat.Message{
+		{Role: "user", Content: "Hello"},
+		{Role: "assistant", Content: "Hi"},
+		{Role: "user", Content: "How are you?"},
+		{Role: "assistant", Content: "I'm good"},
+	}
+
+	// Test finding last user message
+	lastUser := chat.LastMessageByRole("user")
+	if lastUser == nil {
+		t.Error("Expected to find last user message")
+	}
+	if lastUser.Content != "How are you?" {
+		t.Errorf("Expected 'How are you?', got %q", lastUser.Content)
+	}
+
+	// Test finding last assistant message
+	lastAssistant := chat.LastMessageByRole("assistant")
+	if lastAssistant == nil {
+		t.Error("Expected to find last assistant message")
+	}
+	if lastAssistant.Content != "I'm good" {
+		t.Errorf("Expected 'I'm good', got %q", lastAssistant.Content)
+	}
+
+	// Test non-existent role
+	if msg := chat.LastMessageByRole("nonexistent"); msg != nil {
+		t.Error("Expected nil for non-existent role")
+	}
+}
