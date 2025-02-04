@@ -86,9 +86,7 @@ func TestLastMessage(t *testing.T) {
 	chat := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
 
 	// Test empty chat
-	if msg := chat.LastMessage(); msg != nil {
-		t.Errorf("Expected nil message for empty chat, got %v", msg)
-	}
+	assert.Nil(t, chat.LastMessage(), "Expected nil message for empty chat")
 
 	// Add a message and test
 	chat.AddUserContent("Hello")
@@ -223,9 +221,7 @@ func TestUnmarshalJSONError(t *testing.T) {
 	invalidJSON := []byte(`{"messages": [{"role": "user", "content": invalid}]}`)
 
 	err := chat.UnmarshalJSON(invalidJSON)
-	if err == nil {
-		t.Error("Expected error when unmarshaling invalid JSON, got nil")
-	}
+	assert.Error(t, err, "Expected error when unmarshaling invalid JSON")
 }
 
 func TestContentPartsError(t *testing.T) {
