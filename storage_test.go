@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/presbrey/aichat"
 )
 
@@ -73,34 +75,20 @@ func TestChatStorage(t *testing.T) {
 
 	// Test saving
 	err := session.Save(ctx, "test-key")
-	if err != nil {
-		t.Fatalf("Failed to save session: %v", err)
-	}
+	assert.NoError(t, err, "Failed to save session")
 
 	// Create a new session and load the data
 	loadedSession := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
 	err = loadedSession.Load(ctx, "test-key")
-	if err != nil {
-		t.Fatalf("Failed to load session: %v", err)
-	}
+	assert.NoError(t, err, "Failed to load session")
 
 	// Verify loaded data
-	if loadedSession.ID != session.ID {
-		t.Errorf("Expected ID %s, got %s", session.ID, loadedSession.ID)
-	}
-
-	if len(loadedSession.Messages) != len(session.Messages) {
-		t.Errorf("Expected %d messages, got %d", len(session.Messages), len(loadedSession.Messages))
-	}
-
-	if loadedSession.Meta["test"] != "value" {
-		t.Errorf("Expected metadata value 'value', got %v", loadedSession.Meta["test"])
-	}
+	assert.Equal(t, session.ID, loadedSession.ID, "Session ID mismatch")
+	assert.Equal(t, len(session.Messages), len(loadedSession.Messages), "Message count mismatch")
+	assert.Equal(t, "value", loadedSession.Meta["test"], "Metadata value mismatch")
 
 	err = loadedSession.Delete(ctx, "test-key")
-	if err != nil {
-		t.Fatalf("Failed to delete session: %v", err)
-	}
+	assert.NoError(t, err, "Failed to delete session")
 }
 
 func TestStorageErrors(t *testing.T) {
@@ -109,25 +97,16 @@ func TestStorageErrors(t *testing.T) {
 	// Test with nil S3
 	session := &aichat.Chat{ID: "test-id"}
 
-	if err := session.Save(ctx, "test-key"); err == nil {
-		t.Error("Expected error when saving with nil S3")
-	}
-
-	if err := session.Load(ctx, "test-key"); err == nil {
-		t.Error("Expected error when loading with nil S3")
-	}
+	assert.Error(t, session.Save(ctx, "test-key"), "Expected error when saving with nil S3")
+	assert.Error(t, session.Load(ctx, "test-key"), "Expected error when loading with nil S3")
 
 	t.Run("get error", func(t *testing.T) {
 		s3 := &mockS3WithErrors{shouldErrorOnGet: true}
 		chat := &aichat.Chat{Options: aichat.Options{S3: s3}}
 
 		err := chat.Load(ctx, "test-key")
-		if err == nil {
-			t.Error("expected error, got nil")
-		}
-		if !strings.Contains(err.Error(), "failed to get session from storage") {
-			t.Errorf("unexpected error message: %v", err)
-		}
+		assert.Error(t, err, "Expected error")
+		assert.Contains(t, err.Error(), "failed to get session from storage", "Unexpected error message")
 	})
 
 	t.Run("decode error", func(t *testing.T) {
@@ -135,12 +114,8 @@ func TestStorageErrors(t *testing.T) {
 		chat := &aichat.Chat{Options: aichat.Options{S3: s3}}
 
 		err := chat.Load(ctx, "test-key")
-		if err == nil {
-			t.Error("expected error, got nil")
-		}
-		if !strings.Contains(err.Error(), "failed to decode chat data") {
-			t.Errorf("unexpected error message: %v", err)
-		}
+		assert.Error(t, err, "Expected error")
+		assert.Contains(t, err.Error(), "failed to decode chat data", "Unexpected error message")
 	})
 
 	t.Run("marshal error", func(t *testing.T) {
@@ -156,12 +131,8 @@ func TestStorageErrors(t *testing.T) {
 		}
 
 		err := chat.Save(ctx, "test-key")
-		if err == nil {
-			t.Error("expected error, got nil")
-		}
-		if !strings.Contains(err.Error(), "failed to marshal chat data") {
-			t.Errorf("unexpected error message: %v", err)
-		}
+		assert.Error(t, err, "Expected error")
+		assert.Contains(t, err.Error(), "failed to marshal chat data", "Unexpected error message")
 	})
 }
 
@@ -170,13 +141,8 @@ func TestNewStorage(t *testing.T) {
 	opts := aichat.Options{S3: s3}
 
 	storage := aichat.NewStorage(opts)
-	if storage == nil {
-		t.Fatal("Expected non-nil storage")
-	}
-
-	if storage.Options.S3 != s3 {
-		t.Error("Storage options not set correctly")
-	}
+	assert.NotNil(t, storage, "Expected non-nil storage")
+	assert.Equal(t, s3, storage.Options.S3, "Storage options not set correctly")
 }
 
 func TestStorageLoad(t *testing.T) {
@@ -192,34 +158,18 @@ func TestStorageLoad(t *testing.T) {
 		Options: opts,
 	}
 	originalChat.AddUserContent("Hello")
-	if err := originalChat.Save(ctx, "test-key"); err != nil {
-		t.Fatalf("Failed to save chat: %v", err)
-	}
+	assert.NoError(t, originalChat.Save(ctx, "test-key"), "Failed to save chat")
 
 	// Now test loading the chat
 	loadedChat, err := storage.Load(ctx, "test-key")
-	if err != nil {
-		t.Fatalf("Failed to load chat: %v", err)
-	}
-	if loadedChat == nil {
-		t.Fatal("Expected non-nil chat")
-	}
-	if loadedChat.Key != "test-key" {
-		t.Errorf("Expected key 'test-key', got %s", loadedChat.Key)
-	}
-	if loadedChat.ID != "test-id" {
-		t.Errorf("Expected ID 'test-id', got %s", loadedChat.ID)
-	}
-	if len(loadedChat.Messages) != 1 {
-		t.Errorf("Expected 1 message, got %d", len(loadedChat.Messages))
-	}
-	if loadedChat.Options.S3 != s3 {
-		t.Error("Chat options not set correctly")
-	}
+	assert.NoError(t, err, "Failed to load chat")
+	assert.NotNil(t, loadedChat, "Expected non-nil chat")
+	assert.Equal(t, "test-key", loadedChat.Key, "Chat key mismatch")
+	assert.Equal(t, "test-id", loadedChat.ID, "Chat ID mismatch")
+	assert.Equal(t, 1, len(loadedChat.Messages), "Message count mismatch")
+	assert.Equal(t, s3, loadedChat.Options.S3, "Chat options not set correctly")
 
 	// Test loading non-existent chat
 	_, err = storage.Load(ctx, "non-existent-key")
-	if err == nil {
-		t.Error("Expected error when loading non-existent chat")
-	}
+	assert.Error(t, err, "Expected error when loading non-existent chat")
 }
