@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/presbrey/aichat"
 )
 
@@ -40,9 +42,7 @@ func TestChat(t *testing.T) {
 	)
 
 	// Verify message count
-	if len(session.Messages) != 3 {
-		t.Errorf("Expected 3 messages, got %d", len(session.Messages))
-	}
+	assert.Equal(t, 3, len(session.Messages), "Expected 3 messages")
 
 	// Test JSON marshaling
 	data, err := json.Marshal(session)
@@ -57,24 +57,16 @@ func TestChat(t *testing.T) {
 	}
 
 	// Verify unmarshaled data
-	if len(newSession.Messages) != 3 {
-		t.Errorf("Expected 3 messages after unmarshal, got %d", len(newSession.Messages))
-	}
+	assert.Equal(t, 3, len(newSession.Messages), "Expected 3 messages after unmarshal")
 
 	// Verify message content
-	if newSession.Messages[0].ContentString() != "What is the weather like in Boston?" {
-		t.Errorf("Unexpected user message content")
-	}
+	assert.Equal(t, "What is the weather like in Boston?", newSession.Messages[0].ContentString(), "Unexpected user message content")
 
 	// Verify tool call
-	if newSession.Messages[1].ToolCalls[0].Function.Name != "get_current_weather" {
-		t.Errorf("Unexpected function name in tool call")
-	}
+	assert.Equal(t, "get_current_weather", newSession.Messages[1].ToolCalls[0].Function.Name, "Unexpected function name in tool call")
 
 	// Verify tool response
-	if newSession.Messages[2].Name != "get_current_weather" {
-		t.Errorf("Unexpected tool response name")
-	}
+	assert.Equal(t, "get_current_weather", newSession.Messages[2].Name, "Unexpected tool response name")
 
 	newSession.Delete(ctx, "test-key")
 }
@@ -86,13 +78,8 @@ func TestChatWithAssistantMessage(t *testing.T) {
 	content := "The weather in Boston is sunny and 22°C."
 	session.AddAssistantContent(content)
 
-	if len(session.Messages) != 1 {
-		t.Errorf("Expected 1 message, got %d", len(session.Messages))
-	}
-
-	if session.Messages[0].ContentString() != content {
-		t.Errorf("Expected content %q, got %q", content, session.Messages[0].ContentString())
-	}
+	assert.Equal(t, 1, len(session.Messages), "Expected 1 message")
+	assert.Equal(t, content, session.Messages[0].ContentString(), "Message content mismatch")
 }
 
 func TestLastMessage(t *testing.T) {
@@ -110,9 +97,8 @@ func TestLastMessage(t *testing.T) {
 	if msg == nil {
 		t.Fatal("Expected non-nil message after adding user message")
 	}
-	if msg.Content != "Hello" || msg.Role != "user" {
-		t.Errorf("Expected last message with content 'Hello' and role 'user', got content '%s' and role '%s'", msg.Content, msg.Role)
-	}
+	assert.Equal(t, "Hello", msg.Content, "Expected last message content 'Hello'")
+	assert.Equal(t, "user", msg.Role, "Expected last message role 'user'")
 
 	// Add another message and test
 	chat.AddAssistantContent("Hi there")
@@ -228,9 +214,7 @@ func TestAddToolContentError(t *testing.T) {
 	badContent := make(chan int)
 
 	err := chat.AddToolContent("test", "test-id", badContent)
-	if err == nil {
-		t.Error("Expected error when marshaling invalid content, got nil")
-	}
+	assert.Error(t, err, "Expected error when marshaling invalid content")
 }
 
 func TestUnmarshalJSONError(t *testing.T) {
@@ -403,12 +387,8 @@ func TestRangeByRole(t *testing.T) {
 		return nil
 	})
 
-	if err != nil {
-		t.Error("Unexpected error:", err)
-	}
-	if !reflect.DeepEqual(userMsgs, []string{"U1", "U2"}) {
-		t.Errorf("Expected user messages [U1, U2], got %v", userMsgs)
-	}
+	assert.NoError(t, err, "Unexpected error during RangeByRole")
+	assert.Equal(t, []string{"U1", "U2"}, userMsgs, "User messages do not match")
 
 	// Test ranging with error
 	expectedErr := errors.New("test error")
