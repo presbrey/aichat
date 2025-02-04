@@ -2,7 +2,7 @@ package aichat_test
 
 import (
 	"errors"
-	"reflect"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/presbrey/aichat"
@@ -72,13 +72,12 @@ func TestContentParts(t *testing.T) {
 				Content: tt.content,
 			}
 			got, err := msg.ContentParts()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ContentParts() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if tt.wantErr {
+				assert.Error(t, err, "Expected error in ContentParts()")
+			} else {
+				assert.NoError(t, err, "Unexpected error in ContentParts()")
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ContentParts() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got, "ContentParts() result mismatch")
 		})
 	}
 }
@@ -130,14 +129,13 @@ func TestArgumentsMap(t *testing.T) {
 			fc := &aichat.Function{Arguments: tt.args}
 			got, err := fc.ArgumentsMap()
 
-			if (err != nil) != tt.wantError {
-				t.Errorf("ArgumentsMap() error = %v, wantError %v", err, tt.wantError)
+			if tt.wantError {
+				assert.Error(t, err, "Expected error in ArgumentsMap()")
 				return
+			} else {
+				assert.NoError(t, err, "Unexpected error in ArgumentsMap()")
 			}
-
-			if !tt.wantError && !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ArgumentsMap() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got, "ArgumentsMap() result mismatch")
 		})
 	}
 }
@@ -187,14 +185,13 @@ func TestRangePendingToolCalls(t *testing.T) {
 				return nil
 			})
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("RangePendingToolCalls() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				assert.Error(t, err, "Expected error in RangePendingToolCalls()")
 				return
+			} else {
+				assert.NoError(t, err, "Unexpected error in RangePendingToolCalls()")
 			}
-
-			if !reflect.DeepEqual(gotIDs, tt.wantIDs) {
-				t.Errorf("RangePendingToolCalls() processed IDs = %v, want %v", gotIDs, tt.wantIDs)
-			}
+			assert.Equal(t, tt.wantIDs, gotIDs, "Processed IDs do not match expected")
 		})
 	}
 
@@ -210,9 +207,7 @@ func TestRangePendingToolCalls(t *testing.T) {
 			return errors.New(expectedErr)
 		})
 
-		if err == nil || err.Error() != expectedErr {
-			t.Errorf("RangePendingToolCalls() error = %v, want %v", err, expectedErr)
-		}
+		assert.EqualError(t, err, expectedErr, "Expected specific error message in RangePendingToolCalls()")
 	})
 }
 
@@ -293,30 +288,27 @@ func TestToolCallContext(t *testing.T) {
 			}
 
 			// Test Name()
-			if got := tcm.Name(); got != tt.wantName {
-				t.Errorf("Name() = %v, want %v", got, tt.wantName)
-			}
+			assert.Equal(t, tt.wantName, tcm.Name(), "ToolCallContext Name() mismatch")
 
-			// Test Arguments()
 			got, err := tcm.Arguments()
-			if (err != nil) != tt.wantArgsError {
-				t.Errorf("Arguments() error = %v, wantArgsError %v", err, tt.wantArgsError)
+			if tt.wantArgsError {
+				assert.Error(t, err, "Expected error in Arguments()")
 				return
+			} else {
+				assert.NoError(t, err, "Unexpected error in Arguments()")
 			}
-			if !tt.wantArgsError && !reflect.DeepEqual(got, tt.wantArgs) {
-				t.Errorf("Arguments() = %v, want %v", got, tt.wantArgs)
-			}
+			assert.Equal(t, tt.wantArgs, got, "Arguments() result mismatch")
 
-			// Test Return()
 			if tt.returnResult != nil {
 				err := tcm.Return(tt.returnResult)
-				if (err != nil) != tt.wantError {
-					t.Errorf("Return() error = %v, wantError %v", err, tt.wantError)
+				if tt.wantError {
+					assert.Error(t, err, "Expected error in Return()")
+				} else {
+					assert.NoError(t, err, "Unexpected error in Return()")
 				}
 
-				// Verify the response was added to the chat
-				if !tt.wantError && len(chat.Messages) != 1 {
-					t.Error("Return() did not add message to chat")
+				if !tt.wantError {
+					assert.Equal(t, 1, len(chat.Messages), "Expected one message added to chat")
 				}
 			}
 		})
