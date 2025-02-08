@@ -129,15 +129,6 @@ func (chat *Chat) LastMessageByRole(role string) *Message {
 	return nil
 }
 
-// LastMessageRole returns the role of the last message in the chat
-func (chat *Chat) LastMessageRole() string {
-	msg := chat.LastMessage()
-	if msg == nil {
-		return ""
-	}
-	return msg.Role
-}
-
 // LastMessageByType returns the last message in the chat with the given content type
 func (chat *Chat) LastMessageByType(contentType string) *Message {
 	for i := len(chat.Messages) - 1; i >= 0; i-- {
@@ -149,6 +140,15 @@ func (chat *Chat) LastMessageByType(contentType string) *Message {
 		}
 	}
 	return nil
+}
+
+// LastMessageRole returns the role of the last message in the chat
+func (chat *Chat) LastMessageRole() string {
+	msg := chat.LastMessage()
+	if msg == nil {
+		return ""
+	}
+	return msg.Role
 }
 
 // MessageCount returns the total number of messages in the chat
@@ -165,6 +165,31 @@ func (chat *Chat) MessageCountByRole(role string) int {
 		}
 	}
 	return count
+}
+
+// PopMessage removes and returns the last message from the chat
+func (chat *Chat) PopMessage() *Message {
+	if len(chat.Messages) == 0 {
+		return nil
+	}
+	chat.LastUpdated = time.Now()
+	msg := chat.Messages[len(chat.Messages)-1]
+	chat.Messages = chat.Messages[:len(chat.Messages)-1]
+	return msg
+}
+
+// PopMessageIfRole removes and returns the last message from the chat if it matches the role
+func (chat *Chat) PopMessageIfRole(role string) *Message {
+	if len(chat.Messages) == 0 {
+		return nil
+	}
+	msg := chat.Messages[len(chat.Messages)-1]
+	if msg.Role == role {
+		chat.LastUpdated = time.Now()
+		chat.Messages = chat.Messages[:len(chat.Messages)-1]
+		return msg
+	}
+	return nil
 }
 
 // Range iterates through messages
@@ -191,13 +216,48 @@ func (chat *Chat) RangeByRole(role string, fn func(msg *Message) error) error {
 
 // RemoveLastMessage removes and returns the last message from the chat
 func (chat *Chat) RemoveLastMessage() *Message {
+	return chat.PopMessage()
+}
+
+// SetSystemContent sets or updates the system message at the beginning of the chat.
+// If the first message is a system message, it updates its content.
+// Otherwise, it inserts a new system message at the beginning.
+func (chat *Chat) SetSystemContent(content any) {
+	chat.SetSystemMessage(&Message{
+		Role:    "system",
+		Content: content,
+	})
+}
+
+// SetSystemMessage sets the system message at the beginning of the chat
+func (chat *Chat) SetSystemMessage(msg *Message) {
+	if len(chat.Messages) > 0 && chat.Messages[0].Role == "system" {
+		chat.Messages[0] = msg
+	} else {
+		chat.UnshiftMessages(msg)
+	}
+	chat.LastUpdated = time.Now()
+}
+
+// ShiftMessages shifts all messages to the left by one index
+func (chat *Chat) ShiftMessages() *Message {
 	if len(chat.Messages) == 0 {
 		return nil
 	}
-	lastMsg := chat.Messages[len(chat.Messages)-1]
-	chat.Messages = chat.Messages[:len(chat.Messages)-1]
 	chat.LastUpdated = time.Now()
-	return lastMsg
+	msg := chat.Messages[0]
+	chat.Messages = chat.Messages[1:]
+	return msg
+}
+
+// UnshiftMessages unshifts all messages to the right by one index
+func (chat *Chat) UnshiftMessages(msg *Message) {
+	chat.LastUpdated = time.Now()
+	if len(chat.Messages) == 0 {
+		chat.Messages = []*Message{msg}
+	} else {
+		chat.Messages = append([]*Message{msg}, chat.Messages...)
+	}
 }
 
 // MarshalJSON implements custom JSON marshaling for the chat

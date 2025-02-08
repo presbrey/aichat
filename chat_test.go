@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -450,4 +451,260 @@ func TestAddMessage(t *testing.T) {
 			t.Errorf("expected %d messages, got %d", originalLen, len(chat.Messages))
 		}
 	})
+}
+
+func TestChat_SetSystemContent(t *testing.T) {
+	updatedMessage := "updated system message"
+	initialChat := &aichat.Chat{
+		Messages: []*aichat.Message{
+			{Role: "system", Content: "old system message"},
+			{Role: "user", Content: "user message"},
+		},
+	}
+	tests := []struct {
+		name          string
+		initialChat   *aichat.Chat
+		content       any
+		expectedFirst string // role of first message
+		expectedCount int
+		expectedValue any
+	}{
+		{
+			name: "empty chat adds system message",
+			initialChat: &aichat.Chat{
+				Messages: []*aichat.Message{},
+			},
+			content:       "new system message",
+			expectedFirst: "system",
+			expectedCount: 1,
+			expectedValue: "new system message",
+		},
+		{
+			name:          "updates existing system message",
+			initialChat:   initialChat,
+			content:       updatedMessage,
+			expectedFirst: "system",
+			expectedCount: 2,
+			expectedValue: updatedMessage,
+		},
+		{
+			name:          "updates existing system message again",
+			initialChat:   initialChat,
+			content:       updatedMessage,
+			expectedFirst: "system",
+			expectedCount: 2,
+			expectedValue: updatedMessage,
+		},
+		{
+			name: "prepends system message to existing messages",
+			initialChat: &aichat.Chat{
+				Messages: []*aichat.Message{
+					{Role: "user", Content: "first message"},
+					{Role: "assistant", Content: "response"},
+				},
+			},
+			content:       "new system message",
+			expectedFirst: "system",
+			expectedCount: 3,
+			expectedValue: "new system message",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			chat := tt.initialChat
+			beforeTime := chat.LastUpdated
+
+			chat.SetSystemContent(tt.content)
+
+			if len(chat.Messages) != tt.expectedCount {
+				t.Errorf("expected %d messages, got %d", tt.expectedCount, len(chat.Messages))
+			}
+
+			if chat.Messages[0].Role != tt.expectedFirst {
+				t.Errorf("expected first message role %s, got %s", tt.expectedFirst, chat.Messages[0].Role)
+			}
+
+			if chat.Messages[0].Content != tt.expectedValue {
+				t.Errorf("expected content %v, got %v", tt.expectedValue, chat.Messages[0].Content)
+			}
+
+			if !strings.Contains(tt.name, "again") && !chat.LastUpdated.After(beforeTime) {
+				t.Error("LastUpdated timestamp was not updated")
+			}
+		})
+	}
+}
+
+func TestChat_ShiftMessages(t *testing.T) {
+	tests := []struct {
+		name          string
+		initialChat   *aichat.Chat
+		expectedMsg   *aichat.Message
+		expectedCount int
+	}{
+		{
+			name: "shifts message from non-empty chat",
+			initialChat: &aichat.Chat{
+				Messages: []*aichat.Message{
+					{Role: "system", Content: "system message"},
+					{Role: "user", Content: "user message"},
+				},
+			},
+			expectedMsg: &aichat.Message{
+				Role:    "system",
+				Content: "system message",
+			},
+			expectedCount: 1,
+		},
+		{
+			name: "shifts message from single message chat",
+			initialChat: &aichat.Chat{
+				Messages: []*aichat.Message{
+					{Role: "user", Content: "only message"},
+				},
+			},
+			expectedMsg: &aichat.Message{
+				Role:    "user",
+				Content: "only message",
+			},
+			expectedCount: 0,
+		},
+		{
+			name: "shifts message from empty chat",
+			initialChat: &aichat.Chat{
+				Messages: []*aichat.Message{},
+			},
+			expectedMsg:   nil,
+			expectedCount: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			chat := tt.initialChat
+
+			msg := chat.ShiftMessages()
+
+			if msg == nil && tt.expectedMsg != nil {
+				t.Error("expected non-nil message, got nil")
+			} else if msg != nil && tt.expectedMsg == nil {
+				t.Error("expected nil message, got non-nil")
+			} else if msg != nil && tt.expectedMsg != nil {
+				if msg.Role != tt.expectedMsg.Role {
+					t.Errorf("expected role %s, got %s", tt.expectedMsg.Role, msg.Role)
+				}
+				if msg.Content != tt.expectedMsg.Content {
+					t.Errorf("expected content %v, got %v", tt.expectedMsg.Content, msg.Content)
+				}
+			}
+
+			if len(chat.Messages) != tt.expectedCount {
+				t.Errorf("expected %d messages remaining, got %d", tt.expectedCount, len(chat.Messages))
+			}
+		})
+	}
+}
+
+func TestChat_PopMessageIfRole(t *testing.T) {
+	tests := []struct {
+		name          string
+		initialChat   *aichat.Chat
+		role          string
+		expectedMsg   *aichat.Message
+		expectedCount int
+		shouldUpdate  bool
+	}{
+		{
+			name: "pops matching role from chat",
+			initialChat: &aichat.Chat{
+				Messages: []*aichat.Message{
+					{Role: "user", Content: "first"},
+					{Role: "assistant", Content: "last message"},
+				},
+			},
+			role: "assistant",
+			expectedMsg: &aichat.Message{
+				Role:    "assistant",
+				Content: "last message",
+			},
+			expectedCount: 1,
+			shouldUpdate:  true,
+		},
+		{
+			name: "does not pop non-matching role",
+			initialChat: &aichat.Chat{
+				Messages: []*aichat.Message{
+					{Role: "user", Content: "first"},
+					{Role: "assistant", Content: "last message"},
+				},
+			},
+			role:          "user",
+			expectedMsg:   nil,
+			expectedCount: 2,
+			shouldUpdate:  false,
+		},
+		{
+			name: "returns nil for empty chat",
+			initialChat: &aichat.Chat{
+				Messages: []*aichat.Message{},
+			},
+			role:          "user",
+			expectedMsg:   nil,
+			expectedCount: 0,
+			shouldUpdate:  false,
+		},
+		{
+			name: "pops last message when multiple matching roles exist",
+			initialChat: &aichat.Chat{
+				Messages: []*aichat.Message{
+					{Role: "user", Content: "first"},
+					{Role: "assistant", Content: "middle"},
+					{Role: "assistant", Content: "last message"},
+				},
+			},
+			role: "assistant",
+			expectedMsg: &aichat.Message{
+				Role:    "assistant",
+				Content: "last message",
+			},
+			expectedCount: 2,
+			shouldUpdate:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			chat := tt.initialChat
+			beforeTime := chat.LastUpdated
+
+			msg := chat.PopMessageIfRole(tt.role)
+
+			// Check returned message
+			if msg == nil && tt.expectedMsg != nil {
+				t.Error("expected non-nil message, got nil")
+			} else if msg != nil && tt.expectedMsg == nil {
+				t.Error("expected nil message, got non-nil")
+			} else if msg != nil && tt.expectedMsg != nil {
+				if msg.Role != tt.expectedMsg.Role {
+					t.Errorf("expected role %s, got %s", tt.expectedMsg.Role, msg.Role)
+				}
+				if msg.Content != tt.expectedMsg.Content {
+					t.Errorf("expected content %v, got %v", tt.expectedMsg.Content, msg.Content)
+				}
+			}
+
+			// Check remaining message count
+			if len(chat.Messages) != tt.expectedCount {
+				t.Errorf("expected %d messages remaining, got %d", tt.expectedCount, len(chat.Messages))
+			}
+
+			// Check LastUpdated timestamp
+			if tt.shouldUpdate && !chat.LastUpdated.After(beforeTime) {
+				t.Error("LastUpdated timestamp was not updated when it should have been")
+			} else if !tt.shouldUpdate && chat.LastUpdated != beforeTime {
+				t.Error("LastUpdated timestamp was updated when it should not have been")
+			}
+		})
+	}
 }
