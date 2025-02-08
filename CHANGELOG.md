@@ -10,20 +10,14 @@
   - `SetSystemMessage(msg)`: Set or update system message
   - `ShiftMessages()`: Remove and return the first message
   - `UnshiftMessages(msg)`: Insert a message at the beginning
-- Enhanced documentation in README.md:
-  - Comprehensive feature list
-  - Detailed API usage examples
-  - Extended code examples for tool calls
-  - S3 interface implementation details
 
 ### Documentation
 - Expanded README with detailed sections on:
-  - Message operations
-  - Tool call handling
-  - Storage operations
+  - API usage examples
+  - Extended code examples for tool calls
+  - S3 interface implementation details
   - Rich content handling
-- Added comprehensive code examples for all major features
-- Clarified S3-compatible storage backend usage
+  - Comprehensive feature list
 
 ## [v1.1.1] - 2025-02-04
 

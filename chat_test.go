@@ -15,8 +15,7 @@ import (
 
 func TestChat(t *testing.T) {
 	ctx := context.Background()
-	s3 := newMockS3()
-	session := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
+	session := newTestChat()
 
 	// Test adding user message
 	session.AddUserContent("What is the weather like in Boston?")
@@ -72,8 +71,7 @@ func TestChat(t *testing.T) {
 }
 
 func TestChatWithAssistantMessage(t *testing.T) {
-	s3 := newMockS3()
-	session := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
+	session := newTestChat()
 
 	content := "The weather in Boston is sunny and 22°C."
 	session.AddAssistantContent(content)
@@ -82,58 +80,127 @@ func TestChatWithAssistantMessage(t *testing.T) {
 	assert.Equal(t, content, session.Messages[0].ContentString(), "Message content mismatch")
 }
 
+// Helper functions to reduce duplication
+func newTestChat() *aichat.Chat {
+	return &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: newMockS3()}}
+}
+
+func assertMessage(t *testing.T, msg *aichat.Message, expectedRole string, expectedContent any) {
+	t.Helper()
+	if msg == nil {
+		t.Fatal("Expected non-nil message")
+	}
+	assert.Equal(t, expectedRole, msg.Role, "Message role mismatch")
+	assert.Equal(t, expectedContent, msg.Content, "Message content mismatch")
+}
+
 func TestLastMessage(t *testing.T) {
-	s3 := newMockS3()
-	chat := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
+	chat := newTestChat()
 
 	// Test empty chat
 	assert.Nil(t, chat.LastMessage(), "Expected nil message for empty chat")
 
-	// Add a message and test
-	chat.AddUserContent("Hello")
-	msg := chat.LastMessage()
-	if msg == nil {
-		t.Fatal("Expected non-nil message after adding user message")
+	// Test message additions
+	testCases := []struct {
+		addFunc     func()
+		wantRole    string
+		wantContent string
+	}{
+		{
+			addFunc:     func() { chat.AddUserContent("Hello") },
+			wantRole:    "user",
+			wantContent: "Hello",
+		},
+		{
+			addFunc:     func() { chat.AddAssistantContent("Hi there") },
+			wantRole:    "assistant",
+			wantContent: "Hi there",
+		},
 	}
-	assert.Equal(t, "Hello", msg.Content, "Expected last message content 'Hello'")
-	assert.Equal(t, "user", msg.Role, "Expected last message role 'user'")
 
-	// Add another message and test
-	chat.AddAssistantContent("Hi there")
-	msg = chat.LastMessage()
-	if msg == nil {
-		t.Fatal("Expected non-nil message after adding assistant message")
-	}
-	if msg.Content != "Hi there" || msg.Role != "assistant" {
-		t.Errorf("Expected last message with content 'Hi there' and role 'assistant', got content '%s' and role '%s'", msg.Content, msg.Role)
+	for _, tc := range testCases {
+		tc.addFunc()
+		msg := chat.LastMessage()
+		assertMessage(t, msg, tc.wantRole, tc.wantContent)
 	}
 }
 
-func TestLastMessageRole(t *testing.T) {
-	s3 := newMockS3()
-	chat := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
+// Combine TestLastMessageRole with TestLastMessageByRole
+func TestMessageRoleQueries(t *testing.T) {
+	chat := newTestChat()
 
 	// Test empty chat
-	if role := chat.LastMessageRole(); role != "" {
-		t.Errorf("Expected empty role for empty chat, got %q", role)
+	assert.Empty(t, chat.LastMessageRole(), "Expected empty role for empty chat")
+	assert.Nil(t, chat.LastMessageByRole("user"), "Expected nil for empty chat")
+
+	// Add test messages
+	messages := []struct {
+		role    string
+		content string
+	}{
+		{"user", "Hello"},
+		{"assistant", "Hi"},
+		{"user", "How are you?"},
+		{"assistant", "I'm good"},
 	}
 
-	// Test user message
-	chat.AddUserContent("Hello")
-	if role := chat.LastMessageRole(); role != "user" {
-		t.Errorf("Expected role 'user', got %q", role)
+	for _, m := range messages {
+		chat.AddRoleContent(m.role, m.content)
+		assert.Equal(t, m.role, chat.LastMessageRole(), "Last message role mismatch")
 	}
 
-	// Test assistant message
-	chat.AddAssistantContent("Hi there")
-	if role := chat.LastMessageRole(); role != "assistant" {
-		t.Errorf("Expected role 'assistant', got %q", role)
+	// Test LastMessageByRole
+	lastUser := chat.LastMessageByRole("user")
+	assertMessage(t, lastUser, "user", "How are you?")
+
+	lastAssistant := chat.LastMessageByRole("assistant")
+	assertMessage(t, lastAssistant, "assistant", "I'm good")
+
+	assert.Nil(t, chat.LastMessageByRole("nonexistent"), "Expected nil for non-existent role")
+}
+
+func TestMessageCounts(t *testing.T) {
+	chat := newTestChat()
+
+	// Test empty chat
+	assert.Zero(t, chat.MessageCount(), "Expected empty chat to have 0 messages")
+
+	messages := []struct {
+		role    string
+		content string
+	}{
+		{"user", "Hello"},
+		{"assistant", "Hi"},
+		{"user", "How are you?"},
+		{"tool", "result"},
 	}
+
+	// Add messages and verify counts
+	for i, m := range messages {
+		chat.AddRoleContent(m.role, m.content)
+		assert.Equal(t, i+1, chat.MessageCount(), "Total message count mismatch")
+	}
+
+	// Test counts by role
+	expectedCounts := map[string]int{
+		"user":      2,
+		"assistant": 1,
+		"tool":      1,
+		"system":    0,
+	}
+
+	for role, expected := range expectedCounts {
+		assert.Equal(t, expected, chat.MessageCountByRole(role),
+			fmt.Sprintf("Message count mismatch for role %s", role))
+	}
+
+	// Test clear messages
+	chat.ClearMessages()
+	assert.Zero(t, chat.MessageCount(), "Expected empty chat after clear")
 }
 
 func TestAddToolContent(t *testing.T) {
-	s3 := newMockS3()
-	chat := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
+	chat := newTestChat()
 	toolCallID := "test_call_id"
 	toolName := "test_tool"
 
@@ -206,7 +273,7 @@ func TestAddToolContent(t *testing.T) {
 }
 
 func TestAddToolContentError(t *testing.T) {
-	chat := &aichat.Chat{}
+	chat := newTestChat()
 
 	// Create a struct that will fail JSON marshaling
 	badContent := make(chan int)
@@ -216,7 +283,7 @@ func TestAddToolContentError(t *testing.T) {
 }
 
 func TestUnmarshalJSONError(t *testing.T) {
-	chat := &aichat.Chat{}
+	chat := newTestChat()
 
 	// Invalid JSON that will cause an unmarshal error
 	invalidJSON := []byte(`{"messages": [{"role": "user", "content": invalid}]}`)
@@ -241,47 +308,8 @@ func TestContentPartsError(t *testing.T) {
 	}
 }
 
-func TestLastMessageByRole(t *testing.T) {
-	// Test empty chat
-	chat := &aichat.Chat{}
-	if msg := chat.LastMessageByRole("user"); msg != nil {
-		t.Error("Expected nil for empty chat")
-	}
-
-	// Add messages with different roles
-	chat.Messages = []*aichat.Message{
-		{Role: "user", Content: "Hello"},
-		{Role: "assistant", Content: "Hi"},
-		{Role: "user", Content: "How are you?"},
-		{Role: "assistant", Content: "I'm good"},
-	}
-
-	// Test finding last user message
-	lastUser := chat.LastMessageByRole("user")
-	if lastUser == nil {
-		t.Error("Expected to find last user message")
-	}
-	if lastUser.Content != "How are you?" {
-		t.Errorf("Expected 'How are you?', got %q", lastUser.Content)
-	}
-
-	// Test finding last assistant message
-	lastAssistant := chat.LastMessageByRole("assistant")
-	if lastAssistant == nil {
-		t.Error("Expected to find last assistant message")
-	}
-	if lastAssistant.Content != "I'm good" {
-		t.Errorf("Expected 'I'm good', got %q", lastAssistant.Content)
-	}
-
-	// Test non-existent role
-	if msg := chat.LastMessageByRole("nonexistent"); msg != nil {
-		t.Error("Expected nil for non-existent role")
-	}
-}
-
 func TestLastMessageByType(t *testing.T) {
-	chat := new(aichat.Chat)
+	chat := newTestChat()
 
 	// Add messages with different content types
 	chat.AddRoleContent("user", map[string]interface{}{
@@ -315,56 +343,8 @@ func TestLastMessageByType(t *testing.T) {
 	}
 }
 
-func TestMessageCount(t *testing.T) {
-	chat := new(aichat.Chat)
-
-	if chat.MessageCount() != 0 {
-		t.Error("Expected empty chat to have 0 messages")
-	}
-
-	chat.AddUserContent("Hello")
-	chat.AddAssistantContent("Hi")
-	chat.AddUserContent("How are you?")
-
-	if chat.MessageCount() != 3 {
-		t.Errorf("Expected 3 messages, got %d", chat.MessageCount())
-	}
-
-	chat.ClearMessages()
-
-	if chat.MessageCount() != 0 {
-		t.Error("Expected empty chat to have 0 messages")
-	}
-}
-
-func TestMessageCountByRole(t *testing.T) {
-	chat := new(aichat.Chat)
-
-	chat.AddUserContent("Hello")
-	chat.AddAssistantContent("Hi")
-	chat.AddUserContent("How are you?")
-	chat.AddToolRawContent("test-tool", "123", "result")
-
-	tests := []struct {
-		role     string
-		expected int
-	}{
-		{"user", 2},
-		{"assistant", 1},
-		{"tool", 1},
-		{"system", 0},
-	}
-
-	for _, test := range tests {
-		count := chat.MessageCountByRole(test.role)
-		if count != test.expected {
-			t.Errorf("Expected %d messages for role '%s', got %d", test.expected, test.role, count)
-		}
-	}
-}
-
 func TestRangeByRole(t *testing.T) {
-	chat := new(aichat.Chat)
+	chat := newTestChat()
 
 	// Add test messages
 	chat.AddUserContent("U1")
@@ -397,7 +377,7 @@ func TestRangeByRole(t *testing.T) {
 }
 
 func TestRemoveLastMessage(t *testing.T) {
-	chat := new(aichat.Chat)
+	chat := newTestChat()
 
 	// Test removing from empty chat
 	if msg := chat.RemoveLastMessage(); msg != nil {
@@ -424,7 +404,7 @@ func TestRemoveLastMessage(t *testing.T) {
 }
 
 func TestAddMessage(t *testing.T) {
-	chat := &aichat.Chat{}
+	chat := newTestChat()
 	msg := &aichat.Message{Role: "user", Content: "test message"}
 
 	t.Run("add new message", func(t *testing.T) {
@@ -455,25 +435,22 @@ func TestAddMessage(t *testing.T) {
 
 func TestChat_SetSystemContent(t *testing.T) {
 	updatedMessage := "updated system message"
-	initialChat := &aichat.Chat{
-		Messages: []*aichat.Message{
-			{Role: "system", Content: "old system message"},
-			{Role: "user", Content: "user message"},
-		},
+	initialChat := newTestChat()
+	initialChat.Messages = []*aichat.Message{
+		{Role: "system", Content: "old system message"},
+		{Role: "user", Content: "user message"},
 	}
 	tests := []struct {
 		name          string
 		initialChat   *aichat.Chat
 		content       any
-		expectedFirst string // role of first message
+		expectedFirst string
 		expectedCount int
 		expectedValue any
 	}{
 		{
-			name: "empty chat adds system message",
-			initialChat: &aichat.Chat{
-				Messages: []*aichat.Message{},
-			},
+			name:          "empty chat adds system message",
+			initialChat:   newTestChat(),
 			content:       "new system message",
 			expectedFirst: "system",
 			expectedCount: 1,
@@ -545,12 +522,14 @@ func TestChat_ShiftMessages(t *testing.T) {
 	}{
 		{
 			name: "shifts message from non-empty chat",
-			initialChat: &aichat.Chat{
-				Messages: []*aichat.Message{
+			initialChat: func() *aichat.Chat {
+				chat := newTestChat()
+				chat.Messages = []*aichat.Message{
 					{Role: "system", Content: "system message"},
 					{Role: "user", Content: "user message"},
-				},
-			},
+				}
+				return chat
+			}(),
 			expectedMsg: &aichat.Message{
 				Role:    "system",
 				Content: "system message",
@@ -617,12 +596,14 @@ func TestChat_PopMessageIfRole(t *testing.T) {
 	}{
 		{
 			name: "pops matching role from chat",
-			initialChat: &aichat.Chat{
-				Messages: []*aichat.Message{
+			initialChat: func() *aichat.Chat {
+				chat := newTestChat()
+				chat.Messages = []*aichat.Message{
 					{Role: "user", Content: "first"},
 					{Role: "assistant", Content: "last message"},
-				},
-			},
+				}
+				return chat
+			}(),
 			role: "assistant",
 			expectedMsg: &aichat.Message{
 				Role:    "assistant",
@@ -633,22 +614,22 @@ func TestChat_PopMessageIfRole(t *testing.T) {
 		},
 		{
 			name: "does not pop non-matching role",
-			initialChat: &aichat.Chat{
-				Messages: []*aichat.Message{
+			initialChat: func() *aichat.Chat {
+				chat := newTestChat()
+				chat.Messages = []*aichat.Message{
 					{Role: "user", Content: "first"},
 					{Role: "assistant", Content: "last message"},
-				},
-			},
+				}
+				return chat
+			}(),
 			role:          "user",
 			expectedMsg:   nil,
 			expectedCount: 2,
 			shouldUpdate:  false,
 		},
 		{
-			name: "returns nil for empty chat",
-			initialChat: &aichat.Chat{
-				Messages: []*aichat.Message{},
-			},
+			name:          "returns nil for empty chat",
+			initialChat:   newTestChat(),
 			role:          "user",
 			expectedMsg:   nil,
 			expectedCount: 0,
@@ -656,13 +637,15 @@ func TestChat_PopMessageIfRole(t *testing.T) {
 		},
 		{
 			name: "pops last message when multiple matching roles exist",
-			initialChat: &aichat.Chat{
-				Messages: []*aichat.Message{
+			initialChat: func() *aichat.Chat {
+				chat := newTestChat()
+				chat.Messages = []*aichat.Message{
 					{Role: "user", Content: "first"},
 					{Role: "assistant", Content: "middle"},
 					{Role: "assistant", Content: "last message"},
-				},
-			},
+				}
+				return chat
+			}(),
 			role: "assistant",
 			expectedMsg: &aichat.Message{
 				Role:    "assistant",
