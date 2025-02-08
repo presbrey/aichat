@@ -1,5 +1,6 @@
 weather:
-  - type: "function"
+  get_weather_data:
+    type: "function"
     function:
       name: "get_weather_data"
       description: "Retrieves weather data for a given location."
@@ -14,7 +15,8 @@ weather:
             description: "The datetime for which to retrieve weather data (optional)"
         required:
           - location
-  - type: "function"
+  fetch_weather_thumbnail:
+    type: "function"
     function:
       name: "fetch_weather_thumbnail"
       description: "Fetches a relevant thumbnail image from Unsplash based on search query."
@@ -27,7 +29,8 @@ weather:
         required:
           - query
 travel:
-  - type: "function"
+  get_subway_route:
+    type: "function"
     function:
       name: "get_subway_route"
       description: "Retrieves a subway route between two stations."

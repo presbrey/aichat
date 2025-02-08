@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.3] - 2025-02-09
+
+### Added
+- Function declaration converters for Google GenAI SDK
+
+### Changed
+- Improved handling of pending tool calls (only range over "tool" messages for responses)
+- Improved tool schema organization with named entries
+
 ## [1.1.2] - 2025-02-08
 
 ### Added

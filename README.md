@@ -5,7 +5,9 @@
 [![Go](https://github.com/presbrey/aichat/actions/workflows/go.yml/badge.svg)](https://github.com/presbrey/aichat/actions/workflows/go.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/presbrey/aichat.svg)](https://pkg.go.dev/github.com/presbrey/aichat)
 
-A simple Go package for managing AI chat sessions across multiple LLM Providers supporting message history, tool calls, and S3-compatible session storage. Works with OpenRouter, OpenAI, Google GenAI, and many others.
+Simple Go package for managing AI chat sessions across all LLM Providers with options for message history, tool calling, and S3-compatible session storage. Works with OpenRouter, OpenAI, Google GenAI, and many others.
+
+The [toolcalling example](examples) uses [OpenRouter API](https://openrouter.ai/docs/api-reference/overview) with GPT-4o and [OpenAI Function schema](https://platform.openai.com/docs/guides/function-calling). The tool converter in the [googlegenai](schema/googlegenai) subpackage provides support for [Google GenAI SDK](https://github.com/google/generative-ai-go). Define tools once [in YAML](examples/tools/tools.yaml) or JSON and reuse them across sessions and SDKs.
 
 ## Features
 
@@ -37,7 +39,7 @@ A simple Go package for managing AI chat sessions across multiple LLM Providers 
 
 ## Usage
 
-The `Chat`, `Message`, and `ToolCall` structs are designed to be transparent - you are welcome to access their members directly in your applications. For example, you can directly access `chat.Messages`, `chat.Meta`, or `message.Role`.
+The `Chat`, `Message`, and `ToolCall` structs are designed to be transparent - applications are welcome to access their members directly. For example, you can directly access `chat.Messages`, `chat.Meta`, or `message.Role`.
 
 For convenience, the package also provides several helper methods:
 
@@ -55,13 +57,15 @@ For convenience, the package also provides several helper methods:
 - `LastMessageByType(contentType)`: Get the last message with a specific content type
 - `MessageCount()`: Get the total number of messages in the chat
 - `MessageCountByRole(role)`: Get the count of messages with a specific role
-- `PopMessage()`: Remove and return the last message from the chat.
-- `PopMessageIfRole(role)`: Remove and return the last message if it matches the specified role.
+- `PopMessage()`: Remove and return the last message from the chat
+- `PopMessageIfRole(role)`: Remove and return the last message if it matches the specified role
 - `Range(fn)`: Iterate through messages with a callback function
 - `RangeByRole(role, fn)`: Iterate through messages with a specific role
-- `RangePendingToolCalls(fn)`: Iterate over pending tool calls with a callback function.
-- `SetSystemContent(content)`: Set or update the system message at the beginning of - `ShiftMessages()`: Remove and return the first message from the chat.
-- `UnshiftMessages(msg)`: Insert a message at the beginning of the chat.
+- `RangePendingToolCalls(fn)`: Iterate over pending tool calls with a callback function
+- `SetSystemContent(content)`: Set or update the system message content at the beginning of the chat
+- `SetSystemMessage(msg)`: Set or update the system message at the beginning of the chat
+- `ShiftMessages()`: Remove and return the first message from the chat
+- `UnshiftMessages(msg)`: Insert a message at the beginning of the chat
 
 ### Creating a New Chat
 
@@ -183,19 +187,21 @@ if err != nil {
 }
 ```
 
-### Stateful Chat via "S3" Interface
+### Chat Persistence via S3 Interface
 
 The `Chat` struct provides methods for saving, loading, and deleting chat sessions. Pass a key (string) that will be used to lookup the chat in the storage backend. The `S3` interface is used to abstract the storage backend. Official AWS S3, Minio, Tigris, and others are compatible.
 
 ```go
+userSessionKey := "user-123-chat-789"
+
 // Save chat state
-err := chat.Save("chat-123")
+err := chat.Save(userSessionKey)
 
 // Load existing chat
-err = chat.Load("chat-123")
+err = chat.Load(userSessionKey)
 
 // Delete chat
-err = chat.Delete("chat-123")
+err = chat.Delete(userSessionKey)
 
 // Your S3 storage implementation should satisfy this interface:
 type S3 interface {

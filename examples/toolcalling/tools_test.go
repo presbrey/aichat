@@ -6,41 +6,50 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/presbrey/aichat"
 	"github.com/presbrey/aichat/examples/tools"
-	"github.com/presbrey/aichat/openrouter"
+	"github.com/presbrey/aichat/schema/openrouter"
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	openrouterAPIKey = os.Getenv("OPENROUTER_API_KEY")
+	openrouterURL    = os.Getenv("OPENROUTER_URL")
+)
+
 func TestToolCallingExample(t *testing.T) {
-	mockServer := mockOpenRouter(t)
-	defer mockServer.Close()
-	llmURL := mockServer.URL
-	// llmURL := "https://openrouter.ai/api/v1/chat/completions"
+	if openrouterURL == "" {
+		openrouterURL = "https://openrouter.ai/api/v1/chat/completions"
+	}
+	if openrouterAPIKey == "" {
+		mockServer := mockOpenRouter(t)
+		defer mockServer.Close()
+		openrouterURL = mockServer.URL
+	}
 
 	newChat := new(aichat.Chat)
-	newChat.AddMessage(&aichat.Message{
-		Role:    "user",
-		Content: "What is the weather in New York City on May 25th?",
-	})
+	newChat.AddUserContent("What is the weather in New York City on May 25th?")
 
 	req := &openrouter.Request{
 		Messages: newChat.Messages,
 		Model:    "openai/gpt-4o-2024-11-20",
 
-		Tools:      tools.Library["weather"],
+		Tools:      tools.Get("weather"),
 		ToolChoice: "auto",
 	}
 
 	jsonData, err := json.Marshal(req)
 	assert.NoError(t, err)
 
-	httpReq, err := http.NewRequest("POST", llmURL, bytes.NewBuffer(jsonData))
+	httpReq, err := http.NewRequest("POST", openrouterURL, bytes.NewBuffer(jsonData))
 	assert.NoError(t, err)
 
-	httpReq.Header.Set("Authorization", "Bearer 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")
+	if openrouterAPIKey != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+openrouterAPIKey)
+	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
@@ -48,8 +57,8 @@ func TestToolCallingExample(t *testing.T) {
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 
-	var result openrouter.Response
-	assert.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+	result := new(openrouter.Response)
+	assert.NoError(t, json.NewDecoder(resp.Body).Decode(result))
 
 	newChat.AddMessage(result.Choices[0].Message)
 

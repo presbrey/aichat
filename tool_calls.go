@@ -20,13 +20,15 @@ func (chat *Chat) RangePendingToolCalls(fn func(toolCallContext *ToolCallContext
 	// Create a map to track which tool calls have responses
 	responded := make(map[string]bool)
 
-	// First pass: mark which tool calls have responses
-	for _, msg := range chat.Messages {
+	// First pass: identify which tool calls have responses
+	chat.RangeByRole("tool", func(msg *Message) error {
 		if msg.ToolCallID != "" {
 			responded[msg.ToolCallID] = true
 		}
-	}
+		return nil
+	})
 
+	// Second pass: process pending tool calls
 	return chat.RangeByRole("assistant", func(msg *Message) error {
 		for _, call := range msg.ToolCalls {
 			if responded[call.ID] {
