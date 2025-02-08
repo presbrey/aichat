@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -93,6 +94,20 @@ func TestBasicMessageOperations(t *testing.T) {
 			assertMessage(t, msg, tm.wantRole, tm.wantContent)
 			assert.Equal(t, tm.wantRole, chat.LastMessageRole(), "Unexpected last message role")
 		}
+		err := chat.Range(func(msg *aichat.Message) error {
+			chat.RemoveLastMessage()
+			return nil
+		})
+		assert.NoError(t, err)
+		assert.Nil(t, chat.LastMessage(), "Expected nil last message")
+		assert.Empty(t, chat.LastMessageRole(), "Expected empty role for empty chat")
+		assert.Equal(t, 0, chat.MessageCount(), "Unexpected message count")
+		assert.Nil(t, chat.ShiftMessages(), "Expected nil when shifting from empty chat")
+		chat.AddUserContent("Hello")
+		err = chat.Range(func(msg *aichat.Message) error {
+			return http.ErrNotSupported
+		})
+		assert.Equal(t, http.ErrNotSupported, err, "Expected ErrNotSupported")
 	})
 
 	t.Run("message removal operations", func(t *testing.T) {

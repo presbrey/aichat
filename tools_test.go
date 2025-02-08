@@ -2,8 +2,9 @@ package aichat_test
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/presbrey/aichat"
 )
@@ -150,8 +151,8 @@ func TestRangePendingToolCalls(t *testing.T) {
 		{
 			name: "no pending tool calls",
 			messages: []*aichat.Message{
-				{ToolCallID: "call1", Content: "response1"},
-				{ToolCalls: []aichat.ToolCall{{ID: "call1"}}},
+				{Role: "assistant", ToolCalls: []aichat.ToolCall{{ID: "call1"}}},
+				{Role: "tool", ToolCallID: "call1", Content: "response1"},
 			},
 			wantIDs: nil,
 			wantErr: false,
@@ -159,7 +160,7 @@ func TestRangePendingToolCalls(t *testing.T) {
 		{
 			name: "one pending tool call",
 			messages: []*aichat.Message{
-				{ToolCalls: []aichat.ToolCall{{ID: "call1"}}},
+				{Role: "assistant", ToolCalls: []aichat.ToolCall{{ID: "call1"}}},
 			},
 			wantIDs: []string{"call1"},
 			wantErr: false,
@@ -167,8 +168,8 @@ func TestRangePendingToolCalls(t *testing.T) {
 		{
 			name: "multiple pending tool calls",
 			messages: []*aichat.Message{
-				{ToolCalls: []aichat.ToolCall{{ID: "call1"}, {ID: "call2"}}},
-				{ToolCallID: "call1", Content: "response1"},
+				{Role: "assistant", ToolCalls: []aichat.ToolCall{{ID: "call1"}, {ID: "call2"}}},
+				{Role: "tool", ToolCallID: "call1", Content: "response1"},
 			},
 			wantIDs: []string{"call2"},
 			wantErr: false,
@@ -198,7 +199,7 @@ func TestRangePendingToolCalls(t *testing.T) {
 	t.Run("error case", func(t *testing.T) {
 		chat := &aichat.Chat{
 			Messages: []*aichat.Message{
-				{ToolCalls: []aichat.ToolCall{{ID: "call1"}}},
+				{Role: "assistant", ToolCalls: []aichat.ToolCall{{ID: "call1"}}},
 			},
 		}
 

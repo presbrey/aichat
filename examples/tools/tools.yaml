@@ -1,0 +1,45 @@
+weather:
+  - type: "function"
+    function:
+      name: "get_weather_data"
+      description: "Retrieves weather data for a given location."
+      parameters:
+        type: "object"
+        properties:
+          location:
+            type: "string"
+            description: "The location for which to retrieve weather data"
+          datetime:
+            type: "string"
+            description: "The datetime for which to retrieve weather data (optional)"
+        required:
+          - location
+  - type: "function"
+    function:
+      name: "fetch_weather_thumbnail"
+      description: "Fetches a relevant thumbnail image from Unsplash based on search query."
+      parameters:
+        type: "object"
+        properties:
+          query:
+            type: "string"
+            description: "The name of the search query."
+        required:
+          - query
+travel:
+  - type: "function"
+    function:
+      name: "get_subway_route"
+      description: "Retrieves a subway route between two stations."
+      parameters:
+        type: "object"
+        properties:
+          origin:
+            type: "string"
+            description: "The name of the origin station."
+          destination:
+            type: "string"
+            description: "The name of the destination station."
+        required:
+          - origin
+          - destination

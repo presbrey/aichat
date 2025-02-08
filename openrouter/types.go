@@ -16,8 +16,8 @@ type Request struct {
 	MaxTokens   int         `json:"max_tokens,omitempty"`
 	Temperature float64     `json:"temperature,omitempty"`
 
-	Tools      any         `json:"tools,omitempty"`
-	ToolChoice interface{} `json:"tool_choice,omitempty"` // string or ToolChoice
+	Tools      []*aichat.Tool `json:"tools,omitempty"`
+	ToolChoice interface{}    `json:"tool_choice,omitempty"` // string or ToolChoice
 
 	Seed        int     `json:"seed,omitempty"`
 	TopP        float64 `json:"top_p,omitempty"`

@@ -5,7 +5,7 @@
 [![Go](https://github.com/presbrey/aichat/actions/workflows/go.yml/badge.svg)](https://github.com/presbrey/aichat/actions/workflows/go.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/presbrey/aichat.svg)](https://pkg.go.dev/github.com/presbrey/aichat)
 
-A Go package for simplifying the management of AI chat sessions across multiple LLM Providers with support for message history, tool calls, and S3-compatible storage. Works with OpenRouter, OpenAI, Google GenAI, and many others.
+A simple Go package for managing AI chat sessions across multiple LLM Providers supporting message history, tool calls, and S3-compatible session storage. Works with OpenRouter, OpenAI, Google GenAI, and many others.
 
 ## Features
 
