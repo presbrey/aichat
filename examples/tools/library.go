@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed tools.yaml
+//go:embed library.yaml
 var yamlBytes []byte
 
 var Library = map[string]map[string]*aichat.Tool{}

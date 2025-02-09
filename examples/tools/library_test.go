@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLibrary(t *testing.T) {
+func TestToolsLibrary(t *testing.T) {
 	assert.NotEmpty(t, Library, "Expected non-empty library")
 	assert.NotEmpty(t, Library["weather"], "Expected 'weather' tool to be defined")
 	assert.NotEmpty(t, Library["weather"]["get_weather_data"], "Expected 'get_weather_data' tool to be defined")
