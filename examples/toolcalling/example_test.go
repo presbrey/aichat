@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	// OpenRouter API key and URL from environment variables
 	openrouterAPIKey = os.Getenv("OPENROUTER_API_KEY")
 	openrouterURL    = os.Getenv("OPENROUTER_URL")
 )
@@ -25,6 +26,7 @@ func TestToolCallingExample(t *testing.T) {
 		openrouterURL = "https://openrouter.ai/api/v1/chat/completions"
 	}
 	if openrouterAPIKey == "" {
+		// Mock server will be used if OPENROUTER_API_KEY is not set
 		mockServer := mockOpenRouter(t)
 		defer mockServer.Close()
 		openrouterURL = mockServer.URL

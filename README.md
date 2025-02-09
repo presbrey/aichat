@@ -7,7 +7,7 @@
 
 Simple Go package for managing AI chat sessions across all LLM Providers with options for message history, tool calling, and S3-compatible session storage. Works with OpenRouter, OpenAI, Google GenAI, and many others.
 
-The [toolcalling example](examples) uses [OpenRouter API](https://openrouter.ai/docs/api-reference/overview) with GPT-4o and [OpenAI Function schema](https://platform.openai.com/docs/guides/function-calling). The tool converter in the [googlegenai](schema/googlegenai) subpackage provides support for [Google GenAI SDK](https://github.com/google/generative-ai-go). Define tools once [in YAML](examples/tools/tools.yaml) or JSON and reuse them across sessions and SDKs.
+The [toolcalling example](examples/toolcalling/example_test.go) uses [OpenRouter API](https://openrouter.ai/docs/api-reference/overview) with GPT-4o and [OpenAI Function schema](https://platform.openai.com/docs/guides/function-calling). The tool converter in the [googlegenai](schema/googlegenai/convert.go) subpackage provides support for [Google GenAI SDK](https://github.com/google/generative-ai-go). Define tools once [in YAML](examples/tools/tools.yaml) or JSON and reuse them across sessions and SDKs.
 
 ## Features
 
