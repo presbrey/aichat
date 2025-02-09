@@ -9,11 +9,17 @@ import (
 	"os"
 	"testing"
 
+	"github.com/joho/godotenv"
 	"github.com/presbrey/aichat"
 	"github.com/presbrey/aichat/examples/tools"
 	"github.com/presbrey/aichat/schema/openrouter"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	// Load environment variables from .env file
+	godotenv.Load()
+}
 
 var (
 	// OpenRouter API key and URL from environment variables
