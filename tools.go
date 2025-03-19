@@ -44,7 +44,7 @@ func (f *Function) ArgumentsMap() (map[string]interface{}, error) {
 
 	var result map[string]interface{}
 	if err := json.Unmarshal([]byte(f.Arguments), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %v", err)
+		return nil, fmt.Errorf("failed to parse arguments: %w", err)
 	}
 	return result, nil
 }
