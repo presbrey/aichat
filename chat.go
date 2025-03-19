@@ -279,7 +279,7 @@ func (chat *Chat) UnmarshalJSON(data []byte) error {
 		Alias: (*Alias)(chat),
 	}
 	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("failed to unmarshal chat: %v", err)
+		return fmt.Errorf("failed to unmarshal chat: %w", err)
 	}
 	return nil
 }

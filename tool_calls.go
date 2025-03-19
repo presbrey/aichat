@@ -67,7 +67,7 @@ func (tcc *ToolCallContext) Arguments() (map[string]any, error) {
 func (tcc *ToolCallContext) Return(result map[string]any) error {
 	jsonData, err := json.Marshal(result)
 	if err != nil {
-		return fmt.Errorf("failed to marshal result: %v", err)
+		return fmt.Errorf("failed to marshal result: %w", err)
 	}
 	tcc.Chat.AddToolContent(tcc.Name(), tcc.ToolCall.ID, string(jsonData))
 	return nil

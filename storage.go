@@ -26,12 +26,12 @@ func (chat *Chat) Load(ctx context.Context, key string) error {
 
 	reader, err := chat.Options.S3.Get(ctx, key)
 	if err != nil {
-		return fmt.Errorf("failed to get session from storage: %v", err)
+		return fmt.Errorf("failed to get session from storage: %w", err)
 	}
 	defer reader.Close()
 
 	if err := json.NewDecoder(reader).Decode(chat); err != nil {
-		return fmt.Errorf("failed to decode chat data: %v", err)
+		return fmt.Errorf("failed to decode chat data: %w", err)
 	}
 
 	return nil
@@ -45,7 +45,7 @@ func (chat *Chat) Save(ctx context.Context, key string) error {
 
 	data, err := json.Marshal(chat)
 	if err != nil {
-		return fmt.Errorf("failed to marshal chat data: %v", err)
+		return fmt.Errorf("failed to marshal chat data: %w", err)
 	}
 
 	return chat.Options.S3.Put(ctx, key, bytes.NewReader(data))
