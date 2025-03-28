@@ -3,6 +3,7 @@ package aichat
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 )
 
@@ -30,48 +31,53 @@ type Chat struct {
 	Options Options `json:"-"`
 }
 
-// AddMessage adds a message to the chat (idempotent)
+// AddMessage adds a message to the chat
 func (chat *Chat) AddMessage(message *Message) {
 	if message == nil {
 		return
-	}
-	for _, msg := range chat.Messages {
-		if msg == message {
-			return
-		}
 	}
 	chat.Messages = append(chat.Messages, message)
 	chat.LastUpdated = time.Now()
 }
 
+// AddMessageOnce adds a message to the chat (idempotent)
+func (chat *Chat) AddMessageOnce(message *Message) {
+	if slices.Contains(chat.Messages, message) {
+		return
+	}
+	chat.AddMessage(message)
+}
+
 // AddRoleContent adds a role and content to the chat
-func (chat *Chat) AddRoleContent(role string, content any) {
-	chat.Messages = append(chat.Messages, &Message{
+func (chat *Chat) AddRoleContent(role string, content any) *Message {
+	m := &Message{
 		Role:    role,
 		Content: content,
-	})
-	chat.LastUpdated = time.Now()
+	}
+	chat.AddMessage(m)
+	return m
 }
 
 // AddUserContent adds a user message to the chat
-func (chat *Chat) AddUserContent(content any) {
-	chat.AddRoleContent("user", content)
+func (chat *Chat) AddUserContent(content any) *Message {
+	return chat.AddRoleContent("user", content)
 }
 
 // AddAssistantContent adds an assistant message to the chat
-func (chat *Chat) AddAssistantContent(content any) {
-	chat.AddRoleContent("assistant", content)
+func (chat *Chat) AddAssistantContent(content any) *Message {
+	return chat.AddRoleContent("assistant", content)
 }
 
 // AddToolRawContent adds a raw content to the chat
-func (chat *Chat) AddToolRawContent(name string, toolCallID string, content any) {
-	chat.Messages = append(chat.Messages, &Message{
+func (chat *Chat) AddToolRawContent(name string, toolCallID string, content any) *Message {
+	m := &Message{
 		Role:       "tool",
 		Name:       name,
 		ToolCallID: toolCallID,
 		Content:    content,
-	})
-	chat.LastUpdated = time.Now()
+	}
+	chat.AddMessage(m)
+	return m
 }
 
 // AddToolContent adds a tool content to the chat
@@ -92,13 +98,13 @@ func (chat *Chat) AddToolContent(name string, toolCallID string, content any) er
 }
 
 // AddAssistantToolCall adds an assistant message with tool calls
-func (chat *Chat) AddAssistantToolCall(toolCalls []ToolCall) {
-	chat.Messages = append(chat.Messages, &Message{
+func (chat *Chat) AddAssistantToolCall(toolCalls []ToolCall) *Message {
+	m := &Message{
 		Role:      "assistant",
-		Content:   nil,
 		ToolCalls: toolCalls,
-	})
-	chat.LastUpdated = time.Now()
+	}
+	chat.AddMessage(m)
+	return m
 }
 
 // ClearMessages removes all messages from the chat
@@ -222,21 +228,23 @@ func (chat *Chat) RemoveLastMessage() *Message {
 // SetSystemContent sets or updates the system message at the beginning of the chat.
 // If the first message is a system message, it updates its content.
 // Otherwise, it inserts a new system message at the beginning.
-func (chat *Chat) SetSystemContent(content any) {
-	chat.SetSystemMessage(&Message{
+func (chat *Chat) SetSystemContent(content any) *Message {
+	m := &Message{
 		Role:    "system",
 		Content: content,
-	})
+	}
+	return chat.SetSystemMessage(m)
 }
 
 // SetSystemMessage sets the system message at the beginning of the chat
-func (chat *Chat) SetSystemMessage(msg *Message) {
+func (chat *Chat) SetSystemMessage(msg *Message) *Message {
 	if len(chat.Messages) > 0 && chat.Messages[0].Role == "system" {
 		chat.Messages[0] = msg
 	} else {
 		chat.UnshiftMessages(msg)
 	}
 	chat.LastUpdated = time.Now()
+	return msg
 }
 
 // ShiftMessages shifts all messages to the left by one index

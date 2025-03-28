@@ -214,12 +214,12 @@ func TestBasicMessageOperations(t *testing.T) {
 	t.Run("direct message addition", func(t *testing.T) {
 		chat := newTestChat()
 		chat.SetSystemContent("You are a helpful assistant.")
-		chat.SetSystemContent("You are a helpful assistant.")
-		assert.Equal(t, "You are a helpful assistant.", chat.Messages[0].ContentString())
+		chat.SetSystemContent("You are an unhelpful assistant.")
+		assert.Equal(t, "You are an unhelpful assistant.", chat.Messages[0].ContentString())
 
 		// Test adding new message
 		msg := &aichat.Message{Role: "user", Content: "test message"}
-		chat.AddMessage(msg)
+		chat.AddMessageOnce(msg)
 		assert.Equal(t, 2, len(chat.Messages), "Expected 2 messages")
 		assert.Same(t, msg, chat.Messages[1], "Message not added correctly")
 
@@ -227,12 +227,12 @@ func TestBasicMessageOperations(t *testing.T) {
 		chat.SetSystemContent("You are an unhelpful assistant.")
 
 		// Test adding same message twice
-		chat.AddMessage(msg)
+		chat.AddMessageOnce(msg)
 		assert.Equal(t, 2, len(chat.Messages), "Expected no duplicate messages")
 
 		// Test adding nil message
 		originalLen := len(chat.Messages)
-		chat.AddMessage(nil)
+		chat.AddMessageOnce(nil)
 		assert.Equal(t, originalLen, len(chat.Messages), "Expected no change when adding nil message")
 	})
 }
