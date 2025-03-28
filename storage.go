@@ -18,6 +18,16 @@ type S3 interface {
 	Delete(ctx context.Context, key string) error
 }
 
+type s3message struct {
+	*Message
+	Meta map[string]any `json:"meta,omitempty"`
+}
+
+type s3chat struct {
+	*Chat
+	Messages []*s3message `json:"messages"`
+}
+
 // Load loads a chat from S3 storage
 func (chat *Chat) Load(ctx context.Context, key string) error {
 	if chat.Options.S3 == nil {
@@ -30,7 +40,7 @@ func (chat *Chat) Load(ctx context.Context, key string) error {
 	}
 	defer reader.Close()
 
-	if err := json.NewDecoder(reader).Decode(chat); err != nil {
+	if err := json.NewDecoder(reader).Decode(&s3chat{Chat: chat}); err != nil {
 		return fmt.Errorf("failed to decode chat data: %w", err)
 	}
 
@@ -39,15 +49,28 @@ func (chat *Chat) Load(ctx context.Context, key string) error {
 
 // Save saves the session to S3 storage
 func (chat *Chat) Save(ctx context.Context, key string) error {
+	// Ensure S3 storage is configured in options.
+	// We assume Options struct itself is not a pointer based on previous lint error.
 	if chat.Options.S3 == nil {
-		return fmt.Errorf("s3 storage not initialized")
+		return fmt.Errorf("s3 storage not initialized in options")
 	}
 
-	data, err := json.Marshal(chat)
+	s3messages := []*s3message{}
+	for _, msg := range chat.Messages {
+		s3messages = append(s3messages, &s3message{Message: msg})
+	}
+	s3payload := s3chat{
+		Chat:     chat,
+		Messages: s3messages,
+	}
+
+	// Marshal the payload to JSON.
+	data, err := json.Marshal(s3payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal chat data: %w", err)
+		return fmt.Errorf("failed to marshal chat data for S3: %w", err)
 	}
 
+	// Put the marshaled data into S3.
 	return chat.Options.S3.Put(ctx, key, bytes.NewReader(data))
 }
 
