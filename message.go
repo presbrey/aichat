@@ -2,15 +2,24 @@ package aichat
 
 import (
 	"encoding/json"
+	"sync"
 )
 
 // Message represents a chat message in the session
+// Metadata is stored privately and is not marshaled to JSON (LLM does not need it)
 type Message struct {
 	Role       string     `json:"role"`
 	Content    any        `json:"content"`
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 	Name       string     `json:"name,omitempty"`         // For tool responses
 	ToolCallID string     `json:"tool_call_id,omitempty"` // For tool responses
+
+	meta *sync.Map `json:"-"` // Thread-safe metadata store
+}
+
+// Meta returns the message metadata store
+func (m *Message) Meta() *sync.Map {
+	return m.meta
 }
 
 // ContentString returns the content of the message as a string if the content is a simple string.
