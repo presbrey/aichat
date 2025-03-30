@@ -2,6 +2,7 @@ package aichat_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -30,6 +31,17 @@ func (m *mockS3) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 		return nil, errors.New("key not found")
 	}
 	return io.NopCloser(strings.NewReader(string(data))), nil
+}
+
+// SetData sets the data for a key in the mock S3
+func (m *mockS3) SetData(key string, data []byte) {
+	m.data[key] = data
+}
+
+// GetRawData gets the raw data for a key from the mock S3
+func (m *mockS3) GetRawData(key string) ([]byte, bool) {
+	data, ok := m.data[key]
+	return data, ok
 }
 
 func (m *mockS3) Put(ctx context.Context, key string, data io.Reader) error {
@@ -76,6 +88,11 @@ func TestChatStorage(t *testing.T) {
 	// Test saving
 	err := session.Save(ctx, "test-key")
 	assert.NoError(t, err, "Failed to save session")
+
+	// Print the raw JSON for debugging
+	rawData, exists := s3.GetRawData("test-key")
+	assert.True(t, exists, "Saved data not found")
+	fmt.Printf("Raw JSON in TestChatStorage: %s\n", string(rawData))
 
 	// Create a new session and load the data
 	loadedSession := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
@@ -148,14 +165,13 @@ func TestNewStorage(t *testing.T) {
 func TestStorageLoad(t *testing.T) {
 	ctx := context.Background()
 	s3 := newMockS3()
-	opts := aichat.Options{S3: s3}
-	storage := aichat.NewStorage(opts)
+	storage := aichat.NewStorage(aichat.Options{S3: s3})
 
 	// First create and save a chat
 	originalChat := &aichat.Chat{
 		Key:     "test-key",
 		ID:      "test-id",
-		Options: opts,
+		Options: aichat.Options{S3: s3},
 	}
 	originalChat.AddUserContent("Hello")
 	assert.NoError(t, originalChat.Save(ctx, "test-key"), "Failed to save chat")
@@ -172,4 +188,125 @@ func TestStorageLoad(t *testing.T) {
 	// Test loading non-existent chat
 	_, err = storage.Load(ctx, "non-existent-key")
 	assert.Error(t, err, "Expected error when loading non-existent chat")
+}
+
+func TestChatStorageOutput(t *testing.T) {
+	ctx := context.Background()
+	s3 := newMockS3()
+
+	// Create a chat with specific content for testing
+	chat := &aichat.Chat{
+		ID:      "test-output-id",
+		Options: aichat.Options{S3: s3},
+		Meta: map[string]any{
+			"test_key": "test_value",
+			"number":   42,
+		},
+	}
+
+	rawOutput, err := json.Marshal(chat)
+	assert.NoError(t, err, "Failed to marshal chat data")
+	expected := `{"id":"test-output-id","messages":null,"created":"0001-01-01T00:00:00Z","last_updated":"0001-01-01T00:00:00Z","meta":{"number":42,"test_key":"test_value"}}`
+	assert.Equal(t, expected, string(rawOutput))
+
+	// Add a user message
+	userMsg := chat.AddUserContent("Hello, this is a test message")
+	// Add metadata to the message
+	userMsg.Set("msg_meta_key", "msg_meta_value")
+
+	// Add an assistant message
+	assistantMsg := chat.AddAssistantContent("This is a response from the assistant")
+	// Add metadata to the assistant message
+	assistantMsg.Set("assistant_meta", true)
+
+	// Save the chat
+	testKey := "test-output-key"
+	err = chat.Save(ctx, testKey)
+	assert.NoError(t, err, "Failed to save chat")
+
+	// Get the raw JSON data
+	rawData, exists := s3.GetRawData(testKey)
+	assert.True(t, exists, "Saved data not found")
+
+	// Print the raw JSON for debugging
+	fmt.Printf("Raw JSON: %s\n", string(rawData))
+
+	// Parse the JSON to verify its structure
+	var parsedData map[string]any
+	err = json.Unmarshal(rawData, &parsedData)
+	assert.NoError(t, err, "Failed to parse saved JSON data")
+
+	// Verify the top-level structure
+	assert.Equal(t, "test-output-id", parsedData["id"], "Chat ID mismatch in saved JSON")
+
+	// Verify metadata
+	meta, ok := parsedData["meta"].(map[string]interface{})
+	assert.True(t, ok, "Meta field missing or not an object")
+	assert.Equal(t, "test_value", meta["test_key"], "Chat metadata value mismatch")
+	assert.Equal(t, float64(42), meta["number"], "Chat metadata number mismatch")
+
+	// Verify messages array
+	messages, ok := parsedData["messages"].([]interface{})
+	assert.True(t, ok, "Messages field missing or not an array")
+	assert.Equal(t, 2, len(messages), "Incorrect number of messages")
+
+	// Verify first message (user message)
+	if len(messages) > 0 {
+		userMsgData, ok := messages[0].(map[string]any)
+		assert.True(t, ok, "User message data is not an object")
+		assert.Equal(t, "user", userMsgData["role"], "User message role mismatch")
+		assert.Equal(t, "Hello, this is a test message", userMsgData["content"], "User message content mismatch")
+		// Check metadata in the nested meta field
+		userMeta, ok := userMsgData["meta"].(map[string]interface{})
+		assert.True(t, ok, "User message meta field missing or not an object")
+		assert.Equal(t, "msg_meta_value", userMeta["msg_meta_key"], "User message metadata mismatch")
+	}
+
+	// Verify second message (assistant message)
+	if len(messages) > 1 {
+		assistantMsgData, ok := messages[1].(map[string]any)
+		assert.True(t, ok, "Assistant message data is not an object")
+		assert.Equal(t, "assistant", assistantMsgData["role"], "Assistant message role mismatch")
+		assert.Equal(t, "This is a response from the assistant", assistantMsgData["content"], "Assistant message content mismatch")
+		// Check metadata in the nested meta field
+		assistantMeta, ok := assistantMsgData["meta"].(map[string]interface{})
+		assert.True(t, ok, "Assistant message meta field missing or not an object")
+		assert.Equal(t, true, assistantMeta["assistant_meta"], "Assistant message metadata mismatch")
+	}
+
+	// Verify no message meta will be sent to other tools doing direct marshalling
+	rawOutput, err = json.Marshal(chat)
+	assert.NoError(t, err, "Failed to marshal chat data")
+	
+	// Parse the output to verify structure instead of comparing exact strings
+	// This avoids issues with dynamic timestamps
+	var outputData map[string]any
+	err = json.Unmarshal(rawOutput, &outputData)
+	assert.NoError(t, err, "Failed to parse marshalled chat data")
+	
+	// Verify key fields
+	assert.Equal(t, "test-output-id", outputData["id"], "Chat ID mismatch in marshalled JSON")
+	
+	// Verify messages array structure
+	outputMessages, ok := outputData["messages"].([]interface{})
+	assert.True(t, ok, "Messages field missing or not an array in marshalled JSON")
+	assert.Equal(t, 2, len(outputMessages), "Incorrect number of messages in marshalled JSON")
+	
+	// Verify first message (user)
+	userMsgOutput, ok := outputMessages[0].(map[string]interface{})
+	assert.True(t, ok, "User message not an object in marshalled JSON")
+	assert.Equal(t, "user", userMsgOutput["role"], "User role mismatch in marshalled JSON")
+	assert.Equal(t, "Hello, this is a test message", userMsgOutput["content"], "User content mismatch in marshalled JSON")
+	
+	// Verify second message (assistant)
+	assistantMsgOutput, ok := outputMessages[1].(map[string]interface{})
+	assert.True(t, ok, "Assistant message not an object in marshalled JSON")
+	assert.Equal(t, "assistant", assistantMsgOutput["role"], "Assistant role mismatch in marshalled JSON")
+	assert.Equal(t, "This is a response from the assistant", assistantMsgOutput["content"], "Assistant content mismatch in marshalled JSON")
+	
+	// Verify metadata
+	outputMeta, ok := outputData["meta"].(map[string]interface{})
+	assert.True(t, ok, "Meta field missing or not an object in marshalled JSON")
+	assert.Equal(t, "test_value", outputMeta["test_key"], "Chat metadata value mismatch in marshalled JSON")
+	assert.Equal(t, float64(42), outputMeta["number"], "Chat metadata number mismatch in marshalled JSON")
 }

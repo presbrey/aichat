@@ -11,6 +11,27 @@ type Message struct {
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 	Name       string     `json:"name,omitempty"`         // For tool responses
 	ToolCallID string     `json:"tool_call_id,omitempty"` // For tool responses
+
+	// meta is not marshaled to LLM and other tools
+	meta map[string]any `json:"-"`
+}
+
+// Set sets a metadata value for the message.
+// It initializes the underlying map if it's nil.
+func (m *Message) Set(key string, value any) {
+	if m.meta == nil {
+		m.meta = make(map[string]any)
+	}
+	m.meta[key] = value
+}
+
+// Get retrieves a metadata value for the message.
+// Returns nil if the key does not exist.
+func (m *Message) Get(key string) any {
+	if m.meta == nil {
+		return nil
+	}
+	return m.meta[key]
 }
 
 // ContentString returns the content of the message as a string if the content is a simple string.
