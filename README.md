@@ -45,40 +45,40 @@ For convenience, the package provides several helper methods:
 
 ### Chat Methods
 
-- `AddMessage(msg)`: Add a Message
-- `AddRoleContent(role, content)`: Add a message with any role and content
-- `AddUserContent(content)`: Add a user message
-- `AddAssistantContent(content)`: Add an assistant message
-- `AddToolRawContent(name, toolCallID, content)`: Add a tool message with raw content
-- `AddToolContent(name, toolCallID, content)`: Add a tool message with JSON-encoded content if needed
-- `AddAssistantToolCall(toolCalls)`: Add an assistant message with tool calls
+- `AddMessage(msg *Message) bool`: Add a Message, returns true if added
+- `AddRoleContent(role string, content any) *Message`: Add a message with any role and content, returns the created message
+- `AddUserContent(content any) *Message`: Add a user message, returns the created message
+- `AddAssistantContent(content any) *Message`: Add an assistant message, returns the created message
+- `AddToolRawContent(name string, toolCallID string, content any) *Message`: Add a tool message with raw content, returns the created message
+- `AddToolContent(name string, toolCallID string, content any) *Message`: Add a tool message with JSON-encoded content if needed, returns the created message
+- `AddAssistantToolCall(toolCalls []*ToolCall) *Message`: Add an assistant message with tool calls, returns the created message
 - `ClearMessages()`: Remove all messages from the chat
-- `LastMessage()`: Get the most recent message
-- `LastMessageRole()`: Get the role of the most recent message
-- `LastMessageByRole(role)`: Get the last message with a specific role
-- `LastMessageByType(contentType)`: Get the last message with a specific content type
-- `MessageCount()`: Get the total number of messages in the chat
-- `MessageCountByRole(role)`: Get the count of messages with a specific role
-- `PopMessage()`: Remove and return the last message from the chat
-- `PopMessageIfRole(role)`: Remove and return the last message if it matches the specified role
-- `Range(fn)`: Iterate through messages with a callback function
-- `RangeByRole(role, fn)`: Iterate through messages with a specific role
-- `RangePendingToolCalls(fn)`: Iterate over pending tool calls with a callback function
-- `SetSystemContent(content)`: Set or update the system message content at the beginning of the chat
-- `SetSystemMessage(msg)`: Set or update the system message at the beginning of the chat
-- `ShiftMessages()`: Remove and return the first message from the chat
-- `UnshiftMessages(msg)`: Insert a message at the beginning of the chat
+- `LastMessage() *Message`: Get the most recent message
+- `LastMessageRole() string`: Get the role of the most recent message
+- `LastMessageByRole(role string) *Message`: Get the last message with a specific role
+- `LastMessageByType(contentType string) *Message`: Get the last message with a specific content type
+- `MessageCount() int`: Get the total number of messages in the chat
+- `MessageCountByRole(role string) int`: Get the count of messages with a specific role
+- `PopMessage() *Message`: Remove and return the last message from the chat
+- `PopMessageIfRole(role string) *Message`: Remove and return the last message if it matches the specified role
+- `Range(fn func(i int, msg *Message) bool)`: Iterate through messages with a callback function
+- `RangeByRole(role string, fn func(i int, msg *Message) bool)`: Iterate through messages with a specific role
+- `RangePendingToolCalls(fn func(i int, tc *ToolCall) bool)`: Iterate over pending tool calls with a callback function
+- `SetSystemContent(content any) *Message`: Set or update the system message content at the beginning of the chat, returns the system message
+- `SetSystemMessage(msg *Message) bool`: Set or update the system message at the beginning of the chat, returns true if set
+- `ShiftMessages() *Message`: Remove and return the first message from the chat
+- `UnshiftMessages(msg *Message) bool`: Insert a message at the beginning of the chat, returns true if inserted
 
 ### Message Methods
 
-- `Set(key, value)`: Set a metadata value on a Message
-- `Get(key)`: Retrieve a metadata value from a Message
-- `ContentString()`: Get the content as a string if it's a simple string
-- `ContentParts()`: Get the content as a slice of Part structs if it's a multipart message
+- `Set(key string, value any) *Message`: Set a metadata value on a Message, returns the message for chaining
+- `Get(key string) any`: Retrieve a metadata value from a Message
+- `ContentString() string`: Get the content as a string if it's a simple string
+- `ContentParts() []Part`: Get the content as a slice of Part structs if it's a multipart message
 
 ### Function Methods
 
-- `ArgumentsMap()`: Parse and return a map from a Function's Arguments JSON
+- `ArgumentsMap() map[string]any`: Parse and return a map from a Function's Arguments JSON
 
 ### Creating a New Chat
 
