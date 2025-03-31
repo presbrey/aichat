@@ -41,7 +41,9 @@ The [toolcalling example](examples/toolcalling/example_test.go) uses [OpenRouter
 
 The `Chat`, `Message`, and `ToolCall` structs are designed to be transparent - applications are welcome to access their members directly. For example, you can directly access `chat.Messages`, `chat.Meta`, or `message.Role`.
 
-For convenience, the package also provides several helper methods:
+For convenience, the package provides several helper methods:
+
+### Chat Methods
 
 - `AddMessage(msg)`: Add a Message
 - `AddRoleContent(role, content)`: Add a message with any role and content
@@ -66,6 +68,17 @@ For convenience, the package also provides several helper methods:
 - `SetSystemMessage(msg)`: Set or update the system message at the beginning of the chat
 - `ShiftMessages()`: Remove and return the first message from the chat
 - `UnshiftMessages(msg)`: Insert a message at the beginning of the chat
+
+### Message Methods
+
+- `Set(key, value)`: Set a metadata value on a Message
+- `Get(key)`: Retrieve a metadata value from a Message
+- `ContentString()`: Get the content as a string if it's a simple string
+- `ContentParts()`: Get the content as a slice of Part structs if it's a multipart message
+
+### Function Methods
+
+- `ArgumentsMap()`: Parse and return a map from a Function's Arguments JSON
 
 ### Creating a New Chat
 

@@ -2,7 +2,6 @@ package aichat
 
 import (
 	"encoding/json"
-	"fmt"
 	"slices"
 	"time"
 )
@@ -266,28 +265,4 @@ func (chat *Chat) UnshiftMessages(msg *Message) {
 	} else {
 		chat.Messages = append([]*Message{msg}, chat.Messages...)
 	}
-}
-
-// MarshalJSON implements custom JSON marshaling for the chat
-func (chat *Chat) MarshalJSON() ([]byte, error) {
-	type Alias Chat
-	return json.Marshal(&struct {
-		*Alias
-	}{
-		Alias: (*Alias)(chat),
-	})
-}
-
-// UnmarshalJSON implements custom JSON unmarshaling for the chat
-func (chat *Chat) UnmarshalJSON(data []byte) error {
-	type Alias Chat
-	aux := &struct {
-		*Alias
-	}{
-		Alias: (*Alias)(chat),
-	}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("failed to unmarshal chat: %w", err)
-	}
-	return nil
 }

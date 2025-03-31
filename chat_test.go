@@ -2,6 +2,7 @@ package aichat_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -248,12 +249,12 @@ func TestAddToolContentError(t *testing.T) {
 }
 
 func TestUnmarshalJSONError(t *testing.T) {
-	chat := newTestChat()
-
 	// Invalid JSON that will cause an unmarshal error
 	invalidJSON := []byte(`{"messages": [{"role": "user", "content": invalid}]}`)
 
-	err := chat.UnmarshalJSON(invalidJSON)
+	// Unmarshal the invalid JSON into a Chat struct
+	chat := &aichat.Chat{}
+	err := json.Unmarshal(invalidJSON, chat)
 	assert.Error(t, err, "Expected error when unmarshaling invalid JSON")
 }
 
