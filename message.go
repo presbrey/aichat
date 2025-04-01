@@ -53,7 +53,6 @@ func (m *Meta) Keys() []string {
 	}
 	return keys
 }
-}
 
 // ContentString returns the content of the message as a string if the content is a simple string.
 // Returns an empty string if the content is not a string type (e.g., multipart content).
