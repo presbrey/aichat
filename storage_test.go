@@ -212,12 +212,12 @@ func TestChatStorageOutput(t *testing.T) {
 	// Add a user message
 	userMsg := chat.AddUserContent("Hello, this is a test message")
 	// Add metadata to the message
-	userMsg.Set("msg_meta_key", "msg_meta_value")
+	userMsg.Meta().Set("msg_meta_key", "msg_meta_value")
 
 	// Add an assistant message
 	assistantMsg := chat.AddAssistantContent("This is a response from the assistant")
 	// Add metadata to the assistant message
-	assistantMsg.Set("assistant_meta", true)
+	assistantMsg.Meta().Set("assistant_meta", true)
 
 	// Save the chat
 	testKey := "test-output-key"
@@ -277,33 +277,33 @@ func TestChatStorageOutput(t *testing.T) {
 	// Verify no message meta will be sent to other tools doing direct marshalling
 	rawOutput, err = json.Marshal(chat)
 	assert.NoError(t, err, "Failed to marshal chat data")
-	
+
 	// Parse the output to verify structure instead of comparing exact strings
 	// This avoids issues with dynamic timestamps
 	var outputData map[string]any
 	err = json.Unmarshal(rawOutput, &outputData)
 	assert.NoError(t, err, "Failed to parse marshalled chat data")
-	
+
 	// Verify key fields
 	assert.Equal(t, "test-output-id", outputData["id"], "Chat ID mismatch in marshalled JSON")
-	
+
 	// Verify messages array structure
 	outputMessages, ok := outputData["messages"].([]interface{})
 	assert.True(t, ok, "Messages field missing or not an array in marshalled JSON")
 	assert.Equal(t, 2, len(outputMessages), "Incorrect number of messages in marshalled JSON")
-	
+
 	// Verify first message (user)
 	userMsgOutput, ok := outputMessages[0].(map[string]interface{})
 	assert.True(t, ok, "User message not an object in marshalled JSON")
 	assert.Equal(t, "user", userMsgOutput["role"], "User role mismatch in marshalled JSON")
 	assert.Equal(t, "Hello, this is a test message", userMsgOutput["content"], "User content mismatch in marshalled JSON")
-	
+
 	// Verify second message (assistant)
 	assistantMsgOutput, ok := outputMessages[1].(map[string]interface{})
 	assert.True(t, ok, "Assistant message not an object in marshalled JSON")
 	assert.Equal(t, "assistant", assistantMsgOutput["role"], "Assistant role mismatch in marshalled JSON")
 	assert.Equal(t, "This is a response from the assistant", assistantMsgOutput["content"], "Assistant content mismatch in marshalled JSON")
-	
+
 	// Verify metadata
 	outputMeta, ok := outputData["meta"].(map[string]interface{})
 	assert.True(t, ok, "Meta field missing or not an object in marshalled JSON")

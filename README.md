@@ -45,13 +45,14 @@ For convenience, the package provides several helper methods:
 
 ### Chat Methods
 
-- `AddMessage(msg *Message) bool`: Add a Message, returns true if added
+- `AddMessage(msg *Message)`: Add a Message to the chat
+- `AddMessageOnce(msg *Message)`: Add a Message to the chat (idempotent)
 - `AddRoleContent(role string, content any) *Message`: Add a message with any role and content, returns the created message
 - `AddUserContent(content any) *Message`: Add a user message, returns the created message
 - `AddAssistantContent(content any) *Message`: Add an assistant message, returns the created message
 - `AddToolRawContent(name string, toolCallID string, content any) *Message`: Add a tool message with raw content, returns the created message
-- `AddToolContent(name string, toolCallID string, content any) *Message`: Add a tool message with JSON-encoded content if needed, returns the created message
-- `AddAssistantToolCall(toolCalls []*ToolCall) *Message`: Add an assistant message with tool calls, returns the created message
+- `AddToolContent(name string, toolCallID string, content any) error`: Add a tool message with JSON-encoded content if needed, returns error if JSON marshaling fails
+- `AddAssistantToolCall(toolCalls []ToolCall) *Message`: Add an assistant message with tool calls, returns the created message
 - `ClearMessages()`: Remove all messages from the chat
 - `LastMessage() *Message`: Get the most recent message
 - `LastMessageRole() string`: Get the role of the most recent message
@@ -61,20 +62,25 @@ For convenience, the package provides several helper methods:
 - `MessageCountByRole(role string) int`: Get the count of messages with a specific role
 - `PopMessage() *Message`: Remove and return the last message from the chat
 - `PopMessageIfRole(role string) *Message`: Remove and return the last message if it matches the specified role
-- `Range(fn func(i int, msg *Message) bool)`: Iterate through messages with a callback function
-- `RangeByRole(role string, fn func(i int, msg *Message) bool)`: Iterate through messages with a specific role
-- `RangePendingToolCalls(fn func(i int, tc *ToolCall) bool)`: Iterate over pending tool calls with a callback function
+- `Range(fn func(msg *Message) error) error`: Iterate through messages with a callback function
+- `RangeByRole(role string, fn func(msg *Message) error) error`: Iterate through messages with a specific role
+- `RemoveLastMessage() *Message`: Remove and return the last message from the chat (alias for PopMessage)
 - `SetSystemContent(content any) *Message`: Set or update the system message content at the beginning of the chat, returns the system message
-- `SetSystemMessage(msg *Message) bool`: Set or update the system message at the beginning of the chat, returns true if set
+- `SetSystemMessage(msg *Message) *Message`: Set or update the system message at the beginning of the chat, returns the system message
 - `ShiftMessages() *Message`: Remove and return the first message from the chat
-- `UnshiftMessages(msg *Message) bool`: Insert a message at the beginning of the chat, returns true if inserted
+- `UnshiftMessages(msg *Message)`: Insert a message at the beginning of the chat
 
 ### Message Methods
 
-- `Set(key string, value any) *Message`: Set a metadata value on a Message, returns the message for chaining
-- `Get(key string) any`: Retrieve a metadata value from a Message
+- `Meta() *Meta`: Get a Meta struct for working with message metadata
 - `ContentString() string`: Get the content as a string if it's a simple string
-- `ContentParts() []Part`: Get the content as a slice of Part structs if it's a multipart message
+- `ContentParts() ([]*Part, error)`: Get the content as a slice of Part structs if it's a multipart message
+
+### Meta Methods
+
+- `Set(key string, value any)`: Set a metadata value on a Message
+- `Get(key string) any`: Retrieve a metadata value from a Message
+- `Keys() []string`: Get all metadata keys for a Message
 
 ### Function Methods
 
@@ -162,6 +168,13 @@ if parts, err := message.ContentParts(); err == nil {
         }
     }
 }
+
+// Working with message metadata
+message.Meta().Set("timestamp", time.Now())
+message.Meta().Set("processed", true)
+
+timestamp := message.Meta().Get("timestamp")
+keys := message.Meta().Keys() // Get all metadata keys
 ```
 
 ### Handling Pending Tool Calls
