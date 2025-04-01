@@ -44,11 +44,15 @@ func (m *Meta) Get(key string) any {
 
 // Keys returns a slice of all metadata keys in the message.
 func (m *Meta) Keys() []string {
+	if m.meta == nil {
+		return []string{}
+	}
 	keys := make([]string, 0, len(m.meta))
 	for key := range m.meta {
 		keys = append(keys, key)
 	}
 	return keys
+}
 }
 
 // ContentString returns the content of the message as a string if the content is a simple string.
