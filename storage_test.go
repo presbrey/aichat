@@ -89,11 +89,6 @@ func TestChatStorage(t *testing.T) {
 	err := session.Save(ctx, "test-key")
 	assert.NoError(t, err, "Failed to save session")
 
-	// Print the raw JSON for debugging
-	rawData, exists := s3.GetRawData("test-key")
-	assert.True(t, exists, "Saved data not found")
-	fmt.Printf("Raw JSON in TestChatStorage: %s\n", string(rawData))
-
 	// Create a new session and load the data
 	loadedSession := &aichat.Chat{ID: "test-id", Options: aichat.Options{S3: s3}}
 	err = loadedSession.Load(ctx, "test-key")
@@ -190,6 +185,27 @@ func TestStorageLoad(t *testing.T) {
 	assert.Error(t, err, "Expected error when loading non-existent chat")
 }
 
+func TestStorageLoadDoesNotExist(t *testing.T) {
+	ctx := context.Background()
+	s3 := newMockS3()
+	storage := aichat.NewStorage(aichat.Options{S3: s3})
+
+	chat, err := storage.Load(ctx, "non-existent-key")
+	assert.Error(t, err, "Expected error when loading non-existent chat")
+	msg := chat.AddUserContent("Hello")
+	msg.Meta().Set("Content-Type", "text/plain")
+	assert.NoError(t, chat.Save(ctx, "non-existent-key"), "Failed to save chat")
+
+	// Test loading the chat
+	loadedChat, err := storage.Load(ctx, "non-existent-key")
+	assert.NoError(t, err, "Failed to load chat")
+	assert.NotNil(t, loadedChat, "Expected non-nil chat")
+	assert.Equal(t, "non-existent-key", loadedChat.Key, "Chat key mismatch")
+	assert.Equal(t, 1, len(loadedChat.Messages), "Message count mismatch")
+	assert.Equal(t, "Hello", loadedChat.Messages[0].ContentString(), "Message content mismatch")
+	assert.Equal(t, "text/plain", loadedChat.Messages[0].Meta().Get("Content-Type"))
+}
+
 func TestChatStorageOutput(t *testing.T) {
 	ctx := context.Background()
 	s3 := newMockS3()
@@ -227,9 +243,6 @@ func TestChatStorageOutput(t *testing.T) {
 	// Get the raw JSON data
 	rawData, exists := s3.GetRawData(testKey)
 	assert.True(t, exists, "Saved data not found")
-
-	// Print the raw JSON for debugging
-	fmt.Printf("Raw JSON: %s\n", string(rawData))
 
 	// Parse the JSON to verify its structure
 	var parsedData map[string]any

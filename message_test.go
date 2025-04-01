@@ -14,6 +14,7 @@ func TestMessage_Meta(t *testing.T) {
 
 	// Verify initial state is empty
 	assert.Nil(t, msg.Meta().Get("foo"))
+	assert.Equal(t, []string{}, msg.Meta().Keys())
 
 	// Verify storing and loading works on the initially returned map
 	testKey1 := "testKey1"
@@ -37,7 +38,10 @@ func TestMessage_Meta(t *testing.T) {
 
 	// 3. Test keys
 	keys := msg.Meta().Keys()
-	assert.Equal(t, []string{testKey1, testKey2}, keys)
+	// Since map iteration order is not guaranteed, we just check that both keys are present
+	assert.Len(t, keys, 2)
+	assert.Contains(t, keys, testKey1)
+	assert.Contains(t, keys, testKey2)
 
 	// 4. Test Meta serialization
 	jsonBytes, err := json.Marshal(msg.Meta())
