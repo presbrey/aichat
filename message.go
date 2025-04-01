@@ -16,8 +16,8 @@ type Message struct {
 	meta map[string]any `json:"-"`
 }
 
-// Meta
-type Meta struct{ *Message }
+// Meta represents metadata for a message.
+type Meta struct{ msg *Message }
 
 // Meta returns a Meta struct for the message.
 func (m *Message) Meta() *Meta {
@@ -26,32 +26,37 @@ func (m *Message) Meta() *Meta {
 
 // Set sets a metadata value for the message.
 // It initializes the underlying map if it's nil.
-func (m *Meta) Set(key string, value any) {
-	if m.meta == nil {
-		m.meta = make(map[string]any)
+func (meta *Meta) Set(key string, value any) {
+	if meta.msg.meta == nil {
+		meta.msg.meta = make(map[string]any)
 	}
-	m.meta[key] = value
+	meta.msg.meta[key] = value
 }
 
 // Get retrieves a metadata value for the message.
 // Returns nil if the key does not exist.
-func (m *Meta) Get(key string) any {
-	if m.meta == nil {
+func (meta *Meta) Get(key string) any {
+	if meta.msg.meta == nil {
 		return nil
 	}
-	return m.meta[key]
+	return meta.msg.meta[key]
 }
 
 // Keys returns a slice of all metadata keys in the message.
-func (m *Meta) Keys() []string {
-	if m.meta == nil {
+func (meta *Meta) Keys() []string {
+	if meta.msg.meta == nil {
 		return []string{}
 	}
-	keys := make([]string, 0, len(m.meta))
-	for key := range m.meta {
+	keys := make([]string, 0, len(meta.msg.meta))
+	for key := range meta.msg.meta {
 		keys = append(keys, key)
 	}
 	return keys
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (meta *Meta) MarshalJSON() ([]byte, error) {
+	return json.Marshal(meta.msg.meta)
 }
 
 // ContentString returns the content of the message as a string if the content is a simple string.
