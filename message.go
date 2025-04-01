@@ -16,9 +16,17 @@ type Message struct {
 	meta map[string]any `json:"-"`
 }
 
+// Meta
+type Meta struct{ *Message }
+
+// Meta returns a Meta struct for the message.
+func (m *Message) Meta() *Meta {
+	return &Meta{m}
+}
+
 // Set sets a metadata value for the message.
 // It initializes the underlying map if it's nil.
-func (m *Message) Set(key string, value any) {
+func (m *Meta) Set(key string, value any) {
 	if m.meta == nil {
 		m.meta = make(map[string]any)
 	}
@@ -27,11 +35,24 @@ func (m *Message) Set(key string, value any) {
 
 // Get retrieves a metadata value for the message.
 // Returns nil if the key does not exist.
-func (m *Message) Get(key string) any {
+func (m *Meta) Get(key string) any {
 	if m.meta == nil {
 		return nil
 	}
 	return m.meta[key]
+}
+
+// Keys returns a slice of all metadata keys in the message.
+func (m *Meta) Keys() []string {
+	if m.meta == nil {
+		return []string{}
+	}
+	keys := make([]string, 0, len(m.meta))
+	for key := range m.meta {
+		keys = append(keys, key)
+	}
+	return keys
+}
 }
 
 // ContentString returns the content of the message as a string if the content is a simple string.
